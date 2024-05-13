@@ -2,10 +2,10 @@
 title: "Proyecto"
 author: 
   - Luis Fernando Amey Apuy - C20470
-  - Anthony Mauricio Jiménez Navarro -
-  - Fabián Brenes Thomas
-  - Laura  Jimena Villacís Delgado
-  - Marco Antonio Guardia Ortiz
+  - Fabián Brenes Thomas - C21380
+  - Marco Antonio Guardia Ortiz - C23521
+  - Anthony Mauricio Jiménez Navarro - C24067
+  - Laura Jimena Villacís Delgado - C28386
 date: "2024-05-13"
 output: 
   rmdformats::downcute:
@@ -15,6 +15,23 @@ output:
 
 
 ```{r}
+library(readxl)
+ABC <- read_excel("Base de datos.xlsx")
+SUPEN <- read_excel("tavid2000-2150.xls")
+SUPEN_num <- as.data.frame(lapply(SUPEN, as.numeric), stringsAsFactors = FALSE)
+ABC$Edad = 2023 - as.double(format(ABC$`Fecha de nacimiento`, format="%Y"))
+```
+
+
+
+```{r}
+proy_dem_emp <- data.frame(edad = 0:115, población = numeric(116))
+
+proy_dem_emp$población[1] = 500
+
+
+# hacer un check de las qx por cada año por cada persona. Sumarlas todas. Ya entendí la dificultad de este ejercicio
+
 
 ```
 
