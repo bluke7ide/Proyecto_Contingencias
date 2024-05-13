@@ -16,6 +16,7 @@ output:
 
 ```{r}
 library(readxl)
+library(tidyverse)
 ABC <- read_excel("Base de datos.xlsx")
 SUPEN <- read_excel("tavid2000-2150.xls")
 SUPEN_num <- as.data.frame(lapply(SUPEN, as.numeric), stringsAsFactors = FALSE)
@@ -27,11 +28,56 @@ ABC$Edad = 2023 - as.double(format(ABC$`Fecha de nacimiento`, format="%Y"))
 ```{r}
 proy_dem_emp <- data.frame(edad = 0:115, población = numeric(116))
 
+ABC[ABC$Sexo == 'M',]$Sexo <- '1'
+ABC[ABC$Sexo == 'F',]$Sexo <- '2'
+ABC$Sexo <- as.double(ABC$Sexo) 
 proy_dem_emp$población[1] = 500
 
 
 # hacer un check de las qx por cada año por cada persona. Sumarlas todas. Ya entendí la dificultad de este ejercicio
 
 
+```
+
+```{r}
+
+get_qx <- function(df_obs, df_prob){
+  c <- 1
+  all_qx = list()
+  for (i in 1:length(df_obs[[1]])){
+    x <- df_obs$Edad[i]
+    if(i != 1) {
+      if((df_obs$Edad[i-1] == x) & (df_obs$Sexo[i] == df_obs$Sexo[i-1])){
+        
+        all_qx[c] <- all_qx[c-1]
+        c <- c+1
+        next
+      }
+    } 
+    y <- 2023
+    df <- df_prob[df_prob$sex == df_obs$Sexo[i],]
+    local_qx <- list()
+    n <- 1
+    while (any(df$edad == x & df$year == y)) {
+      # Filtrar datos por edad y año actual 
+      qx <- df[df$edad == x & df$year == y , ]$qx
+      local_qx[n] <- qx
+      n <- n + 1
+      x <- x + 1
+      y <- y + 1
+    }
+    all_qx[[c]] <- local_qx
+    c <- c+1
+  }
+  
+  return(all_qx)
+}
+```
+
+
+```{r}
+t <- proc.time()
+a <- get_qx(ABC, SUPEN_num)
+proc.time() - t
 ```
 
