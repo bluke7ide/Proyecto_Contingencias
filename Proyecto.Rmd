@@ -1,0 +1,20 @@
+---
+title: "Proyecto"
+author: 
+  - Luis Fernando Amey Apuy - C20470
+  - Anthony Mauricio Jiménez Navarro -
+  - Fabián Brenes Thomas
+  - Laura  Jimena Villacís Delgado
+  - Marco Antonio Guardia Ortiz
+date: "2024-05-13"
+output: 
+  rmdformats::downcute:
+    default_style: "dark"
+    downcute_theme: "chaos"
+---
+
+
+```{r}
+
+```
+
