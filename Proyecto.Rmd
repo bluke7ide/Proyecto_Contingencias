@@ -26,12 +26,11 @@ ABC$Edad = 2023 - as.double(format(ABC$`Fecha de nacimiento`, format="%Y"))
 
 
 ```{r}
-proy_dem_emp <- data.frame(edad = 0:115, población = numeric(116))
 
 ABC[ABC$Sexo == 'M',]$Sexo <- '1'
 ABC[ABC$Sexo == 'F',]$Sexo <- '2'
 ABC$Sexo <- as.double(ABC$Sexo) 
-proy_dem_emp$población[1] = 500
+
 
 
 # hacer un check de las qx por cada año por cada persona. Sumarlas todas. Ya entendí la dificultad de este ejercicio
@@ -40,7 +39,6 @@ proy_dem_emp$población[1] = 500
 ```
 
 ```{r}
-
 get_qx <- function(df_obs, df_prob){
   c <- 1
   all_qx = list()
@@ -61,12 +59,12 @@ get_qx <- function(df_obs, df_prob){
     while (any(df$edad == x & df$year == y)) {
       # Filtrar datos por edad y año actual 
       qx <- df[df$edad == x & df$year == y , ]$qx
-      local_qx[n] <- qx
+      local_qx[n] <- 1 - qx
       n <- n + 1
       x <- x + 1
       y <- y + 1
     }
-    all_qx[[c]] <- local_qx
+    all_qx[[c]] <-  local_qx
     c <- c+1
   }
   
@@ -77,7 +75,47 @@ get_qx <- function(df_obs, df_prob){
 
 ```{r}
 t <- proc.time()
-a <- get_qx(ABC, SUPEN_num)
+qx <- get_qx(ABC, SUPEN_num)
 proc.time() - t
 ```
+
+```{r}
+proy_per_viva <- data.frame(edad = 0:100, poblacion = numeric(101))
+proy_per_viva$poblacion[1] = 500
+
+proy_viva <- function(qx, df){
+  acum <- numeric(500) + 1
+  for (i in 1:100){
+    for (c in 1:500){
+      if(i > length(qx[[c]])){
+        next
+      }
+      acum[c] <- acum[c]*qx[[c]][[i]]
+    }
+    df$poblacion[i+1] <- sum(acum)
+  }
+  return(df)
+}
+
+proy_per_viva <- proy_viva(qx, proy_per_viva)
+proy_per_viva$poblacion <- floor(proy_per_viva$poblacion)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
