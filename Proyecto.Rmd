@@ -64,7 +64,9 @@ get_qx <- function(df_obs, df_prob){
       x <- x + 1
       y <- y + 1
     }
-    all_qx[[c]] <-  local_qx
+    all_qx[[c]] <- list()
+    all_qx[[c]][[1]] <- df_obs$Sexo[i] 
+    all_qx[[c]][[2]] <- local_qx
     c <- c+1
   }
   
@@ -81,25 +83,48 @@ proc.time() - t
 
 ```{r}
 proy_per_viva <- data.frame(edad = 0:100, poblacion = numeric(101))
-proy_per_viva$poblacion[1] = 500
+proy_per_viva$poblacionH[1] = 272
+proy_per_viva$poblacionM[1] = 228
 
 proy_viva <- function(qx, df){
-  acum <- numeric(500) + 1
+  acumH <- numeric(272) + 1
+  acumM <- numeric(228) + 1
+
   for (i in 1:100){
+    m <- 0
+    h <- 0
     for (c in 1:500){
-      if(i > length(qx[[c]])){
-        next
+      if(qx[[c]][[1]] == 1){
+        h <- h +1
+        if(i > length(qx[[c]][[2]])){
+          next
+        }        
+        acumH[h] <- acumH[h]*qx[[c]][[2]][[i]]
+      } else {
+        m <- m +1
+        if(i > length(qx[[c]][[2]])){
+          next
+        }         
+        acumM[m] <- acumM[m]*qx[[c]][[2]][[i]]
       }
-      acum[c] <- acum[c]*qx[[c]][[i]]
     }
-    df$poblacion[i+1] <- sum(acum)
+
+    df$poblacionH[i+1] <- sum(acumH)
+    df$poblacionM[i+1] <- sum(acumM)
+
   }
   return(df)
 }
 
 proy_per_viva <- proy_viva(qx, proy_per_viva)
-proy_per_viva$poblacion <- floor(proy_per_viva$poblacion)
+proy_per_viva$poblacionM <- floor(proy_per_viva$poblacionM)
+proy_per_viva$poblacionH <- floor(proy_per_viva$poblacionH)
 ```
+
+```{r}
+proy_emp 
+```
+
 
 
 
