@@ -309,6 +309,30 @@ proy_per_dead$poblacionH <- 272 - proy_per_dead$poblacionH
 ```
 
 
+```{r}
+proy_mujeres <- data.frame(
+  edad = 0:100,
+  proy_vivas = proy_per_viva$poblacionM,
+  proy_muertas = proy_per_dead$poblacionM,
+  proy_emp_vivas = proy_emp$poblacionM,
+  proy_pen_vivas = proy_pen$poblacionM,
+  proy_emp_muertas = proy_dead_emp$poblacionM,
+  proy_pen_muertas = proy_dead_pen$poblacionM
+)
+```
+
+```{r}
+proy_hombres <- data.frame(
+  edad = 0:100,
+  proy_vivos = proy_per_viva$poblacionH,
+  proy_muertos = proy_per_dead$poblacionH,
+  proy_emp_vivos = proy_emp$poblacionH,
+  proy_pen_vivos = proy_pen$poblacionH,
+  proy_emp_muertos = proy_dead_emp$poblacionH,
+  proy_pen_muertos = proy_dead_pen$poblacionH
+)
+```
+
 
 
 
