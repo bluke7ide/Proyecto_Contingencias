@@ -117,8 +117,8 @@ proy_viva <- function(qx, df){
 }
 
 proy_per_viva <- proy_viva(qx, proy_per_viva)
-#proy_per_viva$poblacionM <- floor(proy_per_viva$poblacionM)
-#proy_per_viva$poblacionH <- floor(proy_per_viva$poblacionH)
+proy_per_viva$poblacionM <- round(proy_per_viva$poblacionM, 8)
+proy_per_viva$poblacionH <- round(proy_per_viva$poblacionH, 8)
 ```
 
 ```{r}
@@ -162,8 +162,8 @@ proy_emp_vivos <- function(qx, df){
 }
 
 proy_emp <- proy_emp_vivos(qx, proy_emp)
-#proy_emp$poblacionM <- floor(proy_emp$poblacionM)
-#proy_emp$poblacionH <- floor(proy_emp$poblacionH)
+proy_emp$poblacionM <- round(proy_emp$poblacionM, 8)
+proy_emp$poblacionH <- round(proy_emp$poblacionH, 8)
 ```
 
 
@@ -206,17 +206,107 @@ proy_pen_vivos <- function(qx, df){
   return(df)
 }
 proy_pen <- proy_pen_vivos(qx, proy_pen)
-# proy_pen$poblacionM <- floor(proy_pen$poblacionM)
-# proy_pen$poblacionH <- floor(proy_pen$poblacionH)
+proy_pen$poblacionM <- round(proy_pen$poblacionM, 8)
+proy_pen$poblacionH <- round(proy_pen$poblacionH, 8)
 ```
 
 
 ```{r}
-proy_death_emp <- proy_emp
+proy_dead_emp <- data.frame(edad = 0:100, poblacionM = numeric(101), poblacionH = numeric(101))
+
+proy_emp_dead <- function(qx, df){
+  acumH <- numeric(272) + 1
+  acumM <- numeric(228) + 1
+  for (i in 1:100){
+    m <- 0
+    h <- 0
+    localH <- numeric(272)
+    localM <- numeric(228)
+    for (c in 1:500){
+      if(qx[[c]][[2]] == 1){
+        h <- h + 1
+        if(i > length(qx[[c]][[1]])){
+          next
+        }
+        if(65 <= qx[[c]][[3]] + i){
+          acumH[h] <- 0
+          next
+        }        
+        localH[h] <- acumH[h]*(1 - qx[[c]][[1]][[i]])
+        acumH[h] <- acumH[h]*qx[[c]][[1]][[i]]
+      } else {
+        m <- m +1
+        if(i > length(qx[[c]][[1]])){
+          next
+        }     
+        if(65 <= qx[[c]][[3]] + i){
+          acumM[m] <- 0
+          next
+        } 
+        localM[m] <- acumM[m]*(1 - qx[[c]][[1]][[i]])
+        acumM[m] <- acumM[m]*qx[[c]][[1]][[i]]
+      }
+    }
+    df$poblacionH[i+1] <- sum(localH) + df$poblacionH[i]
+    df$poblacionM[i+1] <- sum(localM) + df$poblacionM[i]
+  }
+  return(df)
+}
+
+proy_dead_emp <- proy_emp_dead(qx, proy_dead_emp)
+proy_dead_emp$poblacionM <- round(proy_dead_emp$poblacionM, 8)
+proy_dead_emp$poblacionH <- round(proy_dead_emp$poblacionH, 8)
+```
+
+```{r}
+proy_dead_pen <- data.frame(edad = 0:100, poblacionM = numeric(101), poblacionH = numeric(101))
+proy_pen_dead <- function(qx, df){
+  acumH <- numeric(272) + 1
+  acumM <- numeric(228) + 1
+  for (i in 1:100){
+    m <- 0
+    h <- 0
+    penH <- numeric(272)
+    penM <- numeric(228)
+    for (c in 1:500){
+      if(qx[[c]][[2]] == 1){
+        h <- h + 1
+        if(i > length(qx[[c]][[1]])){
+          next
+        }
+        if(65 <= qx[[c]][[3]] + i){
+          penH[h] <- 1
+        }        
+        penH[h] <- penH[h] * acumH[h] *(1 - qx[[c]][[1]][[i]])
+        acumH[h] <- acumH[h]*qx[[c]][[1]][[i]]
+      } else {
+        m <- m +1
+        if(i > length(qx[[c]][[1]])){
+          next
+        }     
+        if(65 <= qx[[c]][[3]] + i){
+          penM[m] <- 1
+        } 
+        penM[m] <- penM[m]*acumM[m]*(1-qx[[c]][[1]][[i]])
+        acumM[m] <- acumM[m]*qx[[c]][[1]][[i]]
+      }
+    }
+    df$poblacionH[i+1] <- sum(penH) + df$poblacionH[i]
+    df$poblacionM[i+1] <- sum(penM) + df$poblacionM[i]
+  }
+  return(df)
+}
+proy_dead_pen <- proy_pen_dead(qx, proy_dead_pen)
+proy_dead_pen$poblacionM <- round(proy_dead_pen$poblacionM, 8)
+proy_dead_pen$poblacionH <- round(proy_dead_pen$poblacionH, 8)
 ```
 
 
-
+```{r}
+proy_per_dead <- proy_per_viva
+proy_per_dead$poblacionM <- 228 - proy_per_dead$poblacionM
+proy_per_dead$poblacionH <- 272 - proy_per_dead$poblacionH
+```
 
 
 
