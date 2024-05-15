@@ -1,6 +1,7 @@
 ---
 title: "Proyecto"
 author: 
+  - Autores
   - Luis Fernando Amey Apuy - C20470
   - Fabián Brenes Thomas - C21380
   - Marco Antonio Guardia Ortiz - C23521
@@ -316,6 +317,45 @@ proy_mujeres <- data.frame(
 )
 ```
 
+### Observación de la data
+```{r, echo=FALSE, warning=FALSE}
+library(ggplot2)
+ggplot() +
+  geom_line(data = proy_mujeres,
+            aes(x = edad, y = proy_emp_vivas, color = "emp_vivas"),
+            size = 1) +
+  geom_line(data = proy_mujeres,
+            aes(x = edad, y = proy_pen_vivas, color = "pen_vivas"),
+            size = 1) +
+  geom_line(
+    data = proy_mujeres,
+    aes(x = edad, y = proy_emp_muertas, color = "emp_muertas"),
+    size = 1
+  ) +
+  geom_line(
+    data = proy_mujeres,
+    aes(x = edad, y = proy_pen_muertas, color = "pen_muertas"),
+    size = 1
+  ) +
+  scale_color_manual(
+    values = c(
+      "emp_vivas" = "deeppink1",
+      "pen_vivas" = "darksalmon",
+      "emp_muertas" = "darkred",
+      "pen_muertas" = "goldenrod4"
+    )
+  ) +
+  labs(
+    x = "Año",
+    y = "Personas",
+    title = "Proyección Demográfica para las mujeres",
+    color = "Año"
+  ) +
+  theme_minimal() +
+  theme(legend.position = 'bottom')
+```
+
+
 ## En la proyección de hombres
 ```{r}
 proy_hombres <- data.frame(
@@ -327,6 +367,83 @@ proy_hombres <- data.frame(
   proy_emp_muertos = proy_emp_muerta$poblacionH,
   proy_pen_muertos = proy_pen_muerta$poblacionH
 )
+```
+
+
+### Observación de la data
+```{r, echo=FALSE, warning=FALSE}
+library(ggplot2)
+ggplot() +
+  geom_line(data = proy_hombres,
+            aes(x = edad, y = proy_emp_vivos, color = "emp_vivos"),
+            size = 1) +
+  geom_line(data = proy_hombres,
+            aes(x = edad, y = proy_pen_vivos, color = "pen_vivos"),
+            size = 1) +
+  geom_line(
+    data = proy_hombres,
+    aes(x = edad, y = proy_emp_muertos, color = "emp_muertos"),
+    size = 1
+  ) +
+  geom_line(
+    data = proy_hombres,
+    aes(x = edad, y = proy_pen_muertos, color = "pen_muertos"),
+    size = 1
+  ) +
+  scale_color_manual(
+    values = c(
+      "emp_vivos" = "mediumturquoise",
+      "pen_vivos" = "deepskyblue4",
+      "emp_muertos" = "navy",
+      "pen_muertos" = "gray11"
+    )
+  ) +
+  labs(
+    x = "Año",
+    y = "Personas",
+    title = "Proyección Demográfica para los hombres",
+    color = "Año"
+  ) +
+  theme_minimal() +
+  theme(legend.position = 'bottom')
+```
+
+## Observación de la data general
+```{r, echo=FALSE, warning=FALSE}
+library(ggplot2)
+ggplot() +
+  geom_line(data = proy_hombres,
+            aes(x = edad, y = proy_vivos, color = "vivos"),
+            size = 1) +
+  geom_line(data = proy_hombres,
+            aes(x = edad, y = proy_muertos, color = "muertos"),
+            size = 1) +
+  geom_line(
+    data = proy_mujeres,
+    aes(x = edad, y = proy_vivas, color = "vivas"),
+    size = 1
+  ) +
+  geom_line(
+    data = proy_mujeres,
+    aes(x = edad, y = proy_muertas, color = "muertas"),
+    size = 1
+  ) +
+  scale_color_manual(
+    values = c(
+      "vivos" = "dodgerblue1",
+      "muertos" = "darkblue",
+      "vivas" = "magenta2",
+      "muertas" = "red3"
+    )
+  ) +
+  labs(
+    x = "Año",
+    y = "Personas",
+    title = "Proyección Demográfica general",
+    color = "Año"
+  ) +
+  theme_minimal() +
+  theme(legend.position = 'bottom')
 ```
 
 ## Verificar los resultados
