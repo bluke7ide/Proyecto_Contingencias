@@ -331,26 +331,93 @@ proy_hombres <- data.frame(
 
 ## Verificar los resultados
 ```{r}
-proy_hombres$suma = proy_hombres$proy_emp_vivos + 
-  proy_hombres$proy_pen_vivos + 
-  proy_hombres$proy_emp_muertos +
-  proy_hombres$proy_pen_muertos
-
-proy_mujeres$suma = proy_mujeres$proy_emp_vivas + 
-  proy_mujeres$proy_pen_vivas + 
-  proy_mujeres$proy_emp_muertas +
-  proy_mujeres$proy_pen_muertas
+# proy_hombres$suma = proy_hombres$proy_emp_vivos + 
+#   proy_hombres$proy_pen_vivos + 
+#   proy_hombres$proy_emp_muertos +
+#   proy_hombres$proy_pen_muertos
+# 
+# proy_mujeres$suma = proy_mujeres$proy_emp_vivas + 
+#   proy_mujeres$proy_pen_vivas + 
+#   proy_mujeres$proy_emp_muertas +
+#   proy_mujeres$proy_pen_muertas
 
 ```
 
+```{r}
+# rm(proy_emp_muerta)
+# rm(proy_per_viva)
+# rm(proy_per_muerta)
+# rm(proy_emp_viva)
+# rm(proy_pen_viva)
+# rm(proy_pen_muerta)
+# rm(t)
+# rm(proy_emp_dead)
+# rm(proy_viva)
+# rm(proy_pen_vivos)
+# rm(proy_pen_dead)
+# rm(get_qx)
+# rm(proy_emp_vivos)
+```
 
+# Proyección financiera
 
+## Proyección del VP de los pagos de beneficio de muerte de empleados activos
+```{r}
+proy_ben_emp <- function(df){
+  col <- df[[6]]
+  for (i in 1:100){
+    col[102-i] <- (col[102-i] - col[101-i])*5000000*(1.03/1.07)^(100-i)
+    # se hace el supuesto que empieza a inflarse el monto después del primer pago
+  }
+  return(col)
+}
+```
 
+### Observaciones
+```{r}
+proy_hombres$proy_ben_emp <- round(proy_ben_emp(proy_hombres),2)
+proy_mujeres$proy_ben_emp <- round(proy_ben_emp(proy_mujeres),2)
+```
 
+## Proyección del VP de los pagos de beneficio de muerte de pensionado
+```{r}
+proy_ben_pen <- function(df){
+  col <- df[[7]]
+  for (i in 1:100){
+    col[102-i] <- (col[102-i] - col[101-i])*1000000*(1.03/1.07)^(100-i)
+    # se hace el supuesto que empieza a inflarse el monto después del primer pago
+  }
+  return(col)
+}
+```
 
+### Observaciones
+```{r}
+proy_hombres$proy_ben_pen <- round(proy_ben_pen(proy_hombres),2)
+proy_mujeres$proy_ben_pen <- round(proy_ben_pen(proy_mujeres),2)
+```
 
+## Proyección de los pagos de beneficio de anualidades
+```{r}
+proy_ben_ann <- function(df){
+  col <- df[[5]]
+  interes <- 1.07^(1/12) - 1
+  # se hace el supuesto que paga la primera pensión al final de mes 
+  VP_ann <- 300000*(1-(1/1.07))/interes
+  VP_agui <- 150000*(1-(1/1.07))/(1.07^(1/2) - 1)
+  VP <- VP_ann + VP_agui
+  for (i in 1:100){
+    col[i+1] <- col[i+1]*VP*(1.03/1.07)^(i-1)
+  }
+  return(col)
+}
+```
 
-
+### Observaciones
+```{r}
+proy_hombres$proy_ben_ann <- round(proy_ben_ann(proy_hombres),2)
+proy_mujeres$proy_ben_ann <- round(proy_ben_ann(proy_mujeres),2)
+```
 
 
 
