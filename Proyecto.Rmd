@@ -1,7 +1,7 @@
 ---
-title: "Proyecto"
+title: "Proyecto - Contingencias de VIda I"
 author: 
-  - Autores
+  - Estudiantes
   - Luis Fernando Amey Apuy - C20470
   - Fabián Brenes Thomas - C21380
   - Marco Antonio Guardia Ortiz - C23521
@@ -535,6 +535,43 @@ proy_ben_ann <- function(df){
 proy_hombres$proy_ben_ann <- round(proy_ben_ann(proy_hombres),2)
 proy_mujeres$proy_ben_ann <- round(proy_ben_ann(proy_mujeres),2)
 ```
+
+
+# Cálculo de la prima anual
+
+Hay que comprender los casos específicos. Por ejemplo, cuál es el valor de la pensión para cada persona en cada tiempo, cuánto del monto principal vale para el valor futuro de la pensión, entre otros aspectos
+
+## Suma de los valores presentes
+```{r}
+suma_vp_h <- sum(proy_hombres$proy_ben_ann) + 
+  sum(proy_hombres$proy_ben_emp) + 
+  sum(proy_hombres$proy_ben_pen)
+
+suma_vp_m <- sum(proy_mujeres$proy_ben_ann) + 
+  sum(proy_mujeres$proy_ben_emp) + 
+  sum(proy_mujeres$proy_ben_pen)
+```
+
+
+```{r}
+EdadesH <- ABC[ABC$Sexo == 1,] %>% count(Edad)
+EdadesM <- ABC[ABC$Sexo == 2,] %>% count(Edad)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
