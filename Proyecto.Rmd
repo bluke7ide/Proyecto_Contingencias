@@ -13,31 +13,23 @@ output:
     downcute_theme: "chaos"
 ---
 
-
-```{r}
+# Importar y descargar los datos
+```{r, warning=FALSE}
 library(readxl)
 library(tidyverse)
 ABC <- read_excel("Base de datos.xlsx")
 SUPEN <- read_excel("tavid2000-2150.xls")
 SUPEN_num <- as.data.frame(lapply(SUPEN, as.numeric), stringsAsFactors = FALSE)
-ABC$Edad = 2023 - as.double(format(ABC$`Fecha de nacimiento`, format="%Y"))
 ```
-
-
-
+## Transformaciones menores
 ```{r}
-
+ABC$Edad = 2023 - as.double(format(ABC$`Fecha de nacimiento`, format="%Y"))
 ABC[ABC$Sexo == 'M',]$Sexo <- '1'
 ABC[ABC$Sexo == 'F',]$Sexo <- '2'
 ABC$Sexo <- as.double(ABC$Sexo) 
-
-
-
-# hacer un check de las qx por cada año por cada persona. Sumarlas todas. Ya entendí la dificultad de este ejercicio
-
-
 ```
 
+# Función para recolectar los qx de un df agrupado
 ```{r}
 get_qx <- function(df_obs, df_prob){
   c <- 1
@@ -68,22 +60,21 @@ get_qx <- function(df_obs, df_prob){
     all_qx[[c]][[1]] <- local_qx
     all_qx[[c]][[2]] <- df_obs$Sexo[i] 
     all_qx[[c]][[3]] <- df_obs$Edad[i] 
-    
-    
     c <- c+1
   }
-  
   return(all_qx)
 }
 ```
 
-
+## Recolectar la probabilidad de muerte/sobrevivencia de cada observación
 ```{r}
 t <- proc.time()
 qx <- get_qx(ABC, SUPEN_num)
 proc.time() - t
 ```
+# Proyecciones demográficas
 
+## Función madre: observar las posibilidades de vivir
 ```{r}
 proy_per_viva <- data.frame(edad = 0:100, poblacionM = numeric(101), poblacionH = numeric(101))
 proy_per_viva$poblacionH[1] = 272
@@ -121,10 +112,18 @@ proy_per_viva$poblacionM <- round(proy_per_viva$poblacionM, 8)
 proy_per_viva$poblacionH <- round(proy_per_viva$poblacionH, 8)
 ```
 
+## Caso contrario
 ```{r}
-proy_emp <- data.frame(edad = 0:100, poblacionM = numeric(101), poblacionH = numeric(101))
-proy_emp$poblacionH[1] = 272
-proy_emp$poblacionM[1] = 228
+proy_per_muerta <- proy_per_viva
+proy_per_muerta$poblacionM <- 228 - proy_per_muerta$poblacionM
+proy_per_muerta$poblacionH <- 272 - proy_per_muerta$poblacionH
+```
+
+## Seccionar a solo empleados vivos
+```{r}
+proy_emp_viva <- data.frame(edad = 0:100, poblacionM = numeric(101), poblacionH = numeric(101))
+proy_emp_viva$poblacionH[1] = 272
+proy_emp_viva$poblacionM[1] = 228
 
 proy_emp_vivos <- function(qx, df){
   acumH <- numeric(272) + 1
@@ -161,14 +160,14 @@ proy_emp_vivos <- function(qx, df){
   return(df)
 }
 
-proy_emp <- proy_emp_vivos(qx, proy_emp)
-proy_emp$poblacionM <- round(proy_emp$poblacionM, 8)
-proy_emp$poblacionH <- round(proy_emp$poblacionH, 8)
+proy_emp_viva <- proy_emp_vivos(qx, proy_emp_viva)
+proy_emp_viva$poblacionM <- round(proy_emp_viva$poblacionM, 8)
+proy_emp_viva$poblacionH <- round(proy_emp_viva$poblacionH, 8)
 ```
 
-
+## Seccionar a solo pensionados muertos
 ```{r}
-proy_pen <- data.frame(edad = 0:100, poblacionM = numeric(101), poblacionH = numeric(101))
+proy_pen_viva <- data.frame(edad = 0:100, poblacionM = numeric(101), poblacionH = numeric(101))
 proy_pen_vivos <- function(qx, df){
   acumH <- numeric(272) + 1
   acumM <- numeric(228) + 1
@@ -205,14 +204,14 @@ proy_pen_vivos <- function(qx, df){
   }
   return(df)
 }
-proy_pen <- proy_pen_vivos(qx, proy_pen)
-proy_pen$poblacionM <- round(proy_pen$poblacionM, 8)
-proy_pen$poblacionH <- round(proy_pen$poblacionH, 8)
+proy_pen_viva <- proy_pen_vivos(qx, proy_pen_viva)
+proy_pen_viva$poblacionM <- round(proy_pen_viva$poblacionM, 8)
+proy_pen_viva$poblacionH <- round(proy_pen_viva$poblacionH, 8)
 ```
 
-
+## Seccionar a solo empleados muertos
 ```{r}
-proy_dead_emp <- data.frame(edad = 0:100, poblacionM = numeric(101), poblacionH = numeric(101))
+proy_emp_muerta <- data.frame(edad = 0:100, poblacionM = numeric(101), poblacionH = numeric(101))
 
 proy_emp_dead <- function(qx, df){
   acumH <- numeric(272) + 1
@@ -253,13 +252,14 @@ proy_emp_dead <- function(qx, df){
   return(df)
 }
 
-proy_dead_emp <- proy_emp_dead(qx, proy_dead_emp)
-proy_dead_emp$poblacionM <- round(proy_dead_emp$poblacionM, 8)
-proy_dead_emp$poblacionH <- round(proy_dead_emp$poblacionH, 8)
+proy_emp_muerta <- proy_emp_dead(qx, proy_emp_muerta)
+proy_emp_muerta$poblacionM <- round(proy_emp_muerta$poblacionM, 8)
+proy_emp_muerta$poblacionH <- round(proy_emp_muerta$poblacionH, 8)
 ```
 
+## Seccionar a solo pensionados muertos
 ```{r}
-proy_dead_pen <- data.frame(edad = 0:100, poblacionM = numeric(101), poblacionH = numeric(101))
+proy_pen_muerta <- data.frame(edad = 0:100, poblacionM = numeric(101), poblacionH = numeric(101))
 proy_pen_dead <- function(qx, df){
   acumH <- numeric(272) + 1
   acumM <- numeric(228) + 1
@@ -296,41 +296,51 @@ proy_pen_dead <- function(qx, df){
   }
   return(df)
 }
-proy_dead_pen <- proy_pen_dead(qx, proy_dead_pen)
-proy_dead_pen$poblacionM <- round(proy_dead_pen$poblacionM, 8)
-proy_dead_pen$poblacionH <- round(proy_dead_pen$poblacionH, 8)
+proy_pen_muerta <- proy_pen_dead(qx, proy_pen_muerta)
+proy_pen_muerta$poblacionM <- round(proy_pen_muerta$poblacionM, 8)
+proy_pen_muerta$poblacionH <- round(proy_pen_muerta$poblacionH, 8)
 ```
 
+# Resumir los resultados demográficos
 
-```{r}
-proy_per_dead <- proy_per_viva
-proy_per_dead$poblacionM <- 228 - proy_per_dead$poblacionM
-proy_per_dead$poblacionH <- 272 - proy_per_dead$poblacionH
-```
-
-
+## En la proyección de mujeres
 ```{r}
 proy_mujeres <- data.frame(
   edad = 0:100,
   proy_vivas = proy_per_viva$poblacionM,
-  proy_muertas = proy_per_dead$poblacionM,
-  proy_emp_vivas = proy_emp$poblacionM,
-  proy_pen_vivas = proy_pen$poblacionM,
-  proy_emp_muertas = proy_dead_emp$poblacionM,
-  proy_pen_muertas = proy_dead_pen$poblacionM
+  proy_muertas = proy_per_muerta$poblacionM,
+  proy_emp_vivas = proy_emp_viva$poblacionM,
+  proy_pen_vivas = proy_pen_viva$poblacionM,
+  proy_emp_muertas = proy_emp_muerta$poblacionM,
+  proy_pen_muertas = proy_pen_muerta$poblacionM
 )
 ```
 
+## En la proyección de hombres
 ```{r}
 proy_hombres <- data.frame(
   edad = 0:100,
   proy_vivos = proy_per_viva$poblacionH,
-  proy_muertos = proy_per_dead$poblacionH,
-  proy_emp_vivos = proy_emp$poblacionH,
-  proy_pen_vivos = proy_pen$poblacionH,
-  proy_emp_muertos = proy_dead_emp$poblacionH,
-  proy_pen_muertos = proy_dead_pen$poblacionH
+  proy_muertos = proy_per_muerta$poblacionH,
+  proy_emp_vivos = proy_emp_viva$poblacionH,
+  proy_pen_vivos = proy_pen_viva$poblacionH,
+  proy_emp_muertos = proy_emp_muerta$poblacionH,
+  proy_pen_muertos = proy_pen_muerta$poblacionH
 )
+```
+
+## Verificar los resultados
+```{r}
+proy_hombres$suma = proy_hombres$proy_emp_vivos + 
+  proy_hombres$proy_pen_vivos + 
+  proy_hombres$proy_emp_muertos +
+  proy_hombres$proy_pen_muertos
+
+proy_mujeres$suma = proy_mujeres$proy_emp_vivas + 
+  proy_mujeres$proy_pen_vivas + 
+  proy_mujeres$proy_emp_muertas +
+  proy_mujeres$proy_pen_muertas
+
 ```
 
 
