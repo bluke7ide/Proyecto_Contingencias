@@ -138,7 +138,7 @@ proy_emp_vivos <- function(qx, df){
         if(i > length(qx[[c]][[1]])){
           next
         }
-        if(65 <= qx[[c]][[3]] + i){
+        if(65 < qx[[c]][[3]] + i){
           acumH[h] <- 0
           next
         }        
@@ -148,7 +148,7 @@ proy_emp_vivos <- function(qx, df){
         if(i > length(qx[[c]][[1]])){
           next
         }     
-        if(65 <= qx[[c]][[3]] + i){
+        if(65 < qx[[c]][[3]] + i){
           acumM[m] <- 0
           next
         } 
@@ -183,7 +183,7 @@ proy_pen_vivos <- function(qx, df){
         if(i > length(qx[[c]][[1]])){
           next
         }
-        if(65 <= qx[[c]][[3]] + i){
+        if(65 < qx[[c]][[3]] + i){
           penH[h] <- 1
         }        
         acumH[h] <- acumH[h]*qx[[c]][[1]][[i]]
@@ -193,7 +193,7 @@ proy_pen_vivos <- function(qx, df){
         if(i > length(qx[[c]][[1]])){
           next
         }     
-        if(65 <= qx[[c]][[3]] + i){
+        if(65 < qx[[c]][[3]] + i){
           penM[m] <- 1
         } 
         acumM[m] <- acumM[m]*qx[[c]][[1]][[i]]
@@ -228,7 +228,7 @@ proy_emp_dead <- function(qx, df){
         if(i > length(qx[[c]][[1]])){
           next
         }
-        if(65 <= qx[[c]][[3]] + i){
+        if(65 < qx[[c]][[3]] + i){
           acumH[h] <- 0
           next
         }        
@@ -239,7 +239,7 @@ proy_emp_dead <- function(qx, df){
         if(i > length(qx[[c]][[1]])){
           next
         }     
-        if(65 <= qx[[c]][[3]] + i){
+        if(65 < qx[[c]][[3]] + i){
           acumM[m] <- 0
           next
         } 
@@ -275,7 +275,7 @@ proy_pen_dead <- function(qx, df){
         if(i > length(qx[[c]][[1]])){
           next
         }
-        if(65 <= qx[[c]][[3]] + i){
+        if(65 < qx[[c]][[3]] + i){
           penH[h] <- 1
         }        
         penH[h] <- penH[h] * acumH[h] *(1 - qx[[c]][[1]][[i]])
@@ -285,7 +285,7 @@ proy_pen_dead <- function(qx, df){
         if(i > length(qx[[c]][[1]])){
           next
         }     
-        if(65 <= qx[[c]][[3]] + i){
+        if(65 < qx[[c]][[3]] + i){
           penM[m] <- 1
         } 
         penM[m] <- penM[m]*acumM[m]*(1-qx[[c]][[1]][[i]])
@@ -610,6 +610,61 @@ EdadesM <- ABC[ABC$Sexo == 2,] %>% count(Edad)
 ```
 
 
+## Cálculo explícito
+
+```{r}
+
+primas <- function(qx){
+  c <- 1
+  df = data.frame(edad = numeric(500), sexo = numeric(500), prima = numeric(500))
+  for (i in 1:500){
+    x <- qx[[i]]
+    
+    if(i != 1) {
+      ant <-qx[[i-1]]
+      if((x[[2]] == ant[[2]]) & (x[[3]] == ant[[3]])){
+        df$edad[c] <- df$edad[c-1]
+        df$sexo[c] <- df$sexo[c-1]
+        df$prima[c] <- df$prima[c-1]
+        c <- c+1
+        next
+      }
+    } 
+    vp_pen <- 0
+    px_acum <- 1
+    for (j in 1:length(x[[1]])) {
+      vp_pen <- vp_pen 
+      # 3 cosas:
+      # 1) cálculo de los 1M en caso de muerte del pensionado
+      # 2) cálculo de los 5M en caso de muerte del empleado
+      # 3) cálculo de la pensión
+      if (j + x[[3]] <= 65){
+        vp_pen <- vp_pen + px_acum *(1 - x[[1]][[j]])*5000000*(1.03/1.07)^(j-1)
+      } else {
+        interes <- 1.07^(1/12) - 1
+        # se hace el supuesto que paga la primera pensión al final de mes 
+        VP_ann <- 300000*(1-(1/1.07))/interes
+        VP_agui <- 150000*(1-(1/1.07))/(1.07^(1/2) - 1)
+        VP <- VP_ann + VP_agui
+        vp_pen <- vp_pen + px_acum *(1 - x[[1]][[j]])*1000000*(1.03/1.07)^(j-1)
+        vp_pen <- vp_pen + px_acum *(1 - x[[1]][[j]])*VP*(1.03/1.07)^(j-1)
+      }
+      
+      
+      
+    }
+    
+    # Y luego el cálculo de las primas
+    
+    df$edad[c] <- x[[3]]
+    df$sexo[c] <- x[[2]]
+    df$prima[c] <- vp_pen
+    c <- c+1
+  }
+  return(df)
+}
+
+```
 
 
 
