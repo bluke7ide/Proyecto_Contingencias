@@ -1,5 +1,5 @@
 ---
-title: "Proyecto - Contingencias de VIda I"
+title: "Proyecto - Contingencias de Vida I"
 author: 
   - Estudiantes
   - Luis Fernando Amey Apuy - C20470
@@ -480,7 +480,7 @@ ggplot() +
 
 ## Proyección del VP de los pagos de beneficio de muerte de empleados activos
 ```{r}
-proy_ben_emp <- function(df){
+proy_emp_vp <- function(df){
   col <- df[[6]]
   for (i in 1:100){
     col[102-i] <- (col[102-i] - col[101-i])*5000000*(1.03/1.07)^(100-i)
@@ -492,13 +492,31 @@ proy_ben_emp <- function(df){
 
 ### Observaciones
 ```{r}
-proy_hombres$proy_ben_emp <- round(proy_ben_emp(proy_hombres),2)
-proy_mujeres$proy_ben_emp <- round(proy_ben_emp(proy_mujeres),2)
+proy_hombres$proy_emp_vp <- round(proy_emp_vp(proy_hombres),2)
+proy_mujeres$proy_emp_vp <- round(proy_emp_vp(proy_mujeres),2)
+```
+
+## Proyección financiera de los pagos de beneficio de muerte de empleados activos
+```{r}
+proy_emp_fin <- function(df){
+  col <- df[[6]]
+  for (i in 1:100){
+    col[102-i] <- (col[102-i] - col[101-i])*5000000*(1.03)^(100-i)
+    # se hace el supuesto que empieza a inflarse el monto después del primer pago
+  }
+  return(col)
+}
+```
+
+### Observaciones
+```{r}
+proy_hombres$proy_emp_fin <- round(proy_emp_fin(proy_hombres),2)
+proy_mujeres$proy_emp_fin <- round(proy_emp_fin(proy_mujeres),2)
 ```
 
 ## Proyección del VP de los pagos de beneficio de muerte de pensionado
 ```{r}
-proy_ben_pen <- function(df){
+proy_pen_vp <- function(df){
   col <- df[[7]]
   for (i in 1:100){
     col[102-i] <- (col[102-i] - col[101-i])*1000000*(1.03/1.07)^(100-i)
@@ -510,13 +528,31 @@ proy_ben_pen <- function(df){
 
 ### Observaciones
 ```{r}
-proy_hombres$proy_ben_pen <- round(proy_ben_pen(proy_hombres),2)
-proy_mujeres$proy_ben_pen <- round(proy_ben_pen(proy_mujeres),2)
+proy_hombres$proy_pen_vp <- round(proy_pen_vp(proy_hombres),2)
+proy_mujeres$proy_pen_vp <- round(proy_pen_vp(proy_mujeres),2)
 ```
 
-## Proyección de los pagos de beneficio de anualidades
+## Proyección financiera de los pagos de beneficio de muerte de pensionado
 ```{r}
-proy_ben_ann <- function(df){
+proy_pen_fin <- function(df){
+  col <- df[[7]]
+  for (i in 1:100){
+    col[102-i] <- (col[102-i] - col[101-i])*1000000*(1.03)^(100-i)
+    # se hace el supuesto que empieza a inflarse el monto después del primer pago
+  }
+  return(col)
+}
+```
+
+### Observaciones
+```{r}
+proy_hombres$proy_pen_fin <- round(proy_pen_fin(proy_hombres),2)
+proy_mujeres$proy_pen_fin <- round(proy_pen_fin(proy_mujeres),2)
+```
+
+## Proyección del VP de los pagos de beneficio de anualidades
+```{r}
+proy_ann_vp <- function(df){
   col <- df[[5]]
   interes <- 1.07^(1/12) - 1
   # se hace el supuesto que paga la primera pensión al final de mes 
@@ -532,10 +568,25 @@ proy_ben_ann <- function(df){
 
 ### Observaciones
 ```{r}
-proy_hombres$proy_ben_ann <- round(proy_ben_ann(proy_hombres),2)
-proy_mujeres$proy_ben_ann <- round(proy_ben_ann(proy_mujeres),2)
+proy_hombres$proy_ann_vp <- round(proy_ann_vp(proy_hombres),2)
+proy_mujeres$proy_ann_vp <- round(proy_ann_vp(proy_mujeres),2)
+```
+## Proyección de los pagos de beneficio de anualidades
+```{r}
+proy_ann_fin <- function(df){
+  col <- df[[5]]
+  for (i in 1:100){
+    col[i+1] <- col[i+1]*3900000*(1.03)^(i-1)
+  }
+  return(col)
+}
 ```
 
+### Observaciones
+```{r}
+proy_hombres$proy_ann_fin <- round(proy_ann_fin(proy_hombres),0)
+proy_mujeres$proy_ann_fin <- round(proy_ann_fin(proy_mujeres),0)
+```
 
 # Cálculo de la prima anual
 
