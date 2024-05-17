@@ -638,10 +638,12 @@ rm(proy_M_fin)
 ```
 
 
-# Cálculo de la prima anual
+# Prima anual
+
+## Función de la prima
+Va a servir para la nivelada
 
 ```{r}
-
 primas <- function(qx){
   c <- 1
   df = data.frame(edad = numeric(500), sexo = numeric(500), prima = numeric(500))
@@ -700,7 +702,7 @@ primas_anuales <- primas(qx)
 primas_anuales <- primas_anuales %>% arrange(edad) %>% distinct()
 ```
 
-# Resumir la prima anual
+## Resumir la prima anual
 
 ```{r}
 ggplot() +
@@ -801,21 +803,22 @@ ggplot() +
   theme_minimal() +
   theme(legend.position = 'bottom') 
 ```
-```{r}
-rm(primas)
-```
 
 
-# Cálculo de la prima nivelada
+
+# Prima nivelada
 
 ## Suma de los valores presentes
 ```{r}
-suma_vp <- sum(proy_hombres$valor_p) + sum(proy_mujeres$valor_p) 
-# suma_check <- sum(primas(qx)$vp)
-prima_nivelada <- suma_vp/sum(primas(qx)$anualidad)
+(suma_vp <- sum(proy_hombres$valor_p) + sum(proy_mujeres$valor_p) )
+(suma_check <- sum(primas(qx)$vp))
+```
+## Cálculo de la prima
+```{r}
+(prima_nivelada <- suma_vp/sum(primas(qx)$anualidad))
 ```
 
-La prima nivelada entonces da 1.2 millones de colones anuales, o 98 mil colones al mes.
+La prima nivelada entonces da 1.2 millones de colones anuales aproximadamente, o 98 mil colones al mes.
 
 
 
