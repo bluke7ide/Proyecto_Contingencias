@@ -18,6 +18,7 @@ output:
 ```{r, warning=FALSE}
 library(readxl)
 library(tidyverse)
+library(ggplot2)
 ABC <- read_excel("Base de datos.xlsx")
 SUPEN <- read_excel("tavid2000-2150.xls")
 SUPEN_num <- as.data.frame(lapply(SUPEN, as.numeric), stringsAsFactors = FALSE)
@@ -319,7 +320,6 @@ proy_mujeres <- data.frame(
 
 ### Observación de la data
 ```{r, echo=FALSE, warning=FALSE}
-library(ggplot2)
 ggplot() +
   geom_line(data = proy_mujeres,
             aes(x = edad, y = proy_emp_vivas, color = "emp_vivas"),
@@ -349,12 +349,11 @@ ggplot() +
     x = "Año",
     y = "Personas",
     title = "Proyección Demográfica para las mujeres",
-    color = "Año"
+    color = "Tipo"
   ) +
   theme_minimal() +
   theme(legend.position = 'bottom')
 ```
-
 
 ## En la proyección de hombres
 ```{r}
@@ -369,10 +368,8 @@ proy_hombres <- data.frame(
 )
 ```
 
-
 ### Observación de la data
 ```{r, echo=FALSE, warning=FALSE}
-library(ggplot2)
 ggplot() +
   geom_line(data = proy_hombres,
             aes(x = edad, y = proy_emp_vivos, color = "emp_vivos"),
@@ -402,7 +399,7 @@ ggplot() +
     x = "Año",
     y = "Personas",
     title = "Proyección Demográfica para los hombres",
-    color = "Año"
+    color = "Tipo"
   ) +
   theme_minimal() +
   theme(legend.position = 'bottom')
@@ -410,7 +407,6 @@ ggplot() +
 
 ## Observación de la data general
 ```{r, echo=FALSE, warning=FALSE}
-library(ggplot2)
 ggplot() +
   geom_line(data = proy_hombres,
             aes(x = edad, y = proy_vivos, color = "vivos"),
@@ -440,7 +436,7 @@ ggplot() +
     x = "Año",
     y = "Personas",
     title = "Proyección Demográfica general",
-    color = "Año"
+    color = "Tipo"
   ) +
   theme_minimal() +
   theme(legend.position = 'bottom')
@@ -461,19 +457,19 @@ ggplot() +
 ```
 
 ```{r}
-# rm(proy_emp_muerta)
-# rm(proy_per_viva)
-# rm(proy_per_muerta)
-# rm(proy_emp_viva)
-# rm(proy_pen_viva)
-# rm(proy_pen_muerta)
-# rm(t)
-# rm(proy_emp_dead)
-# rm(proy_viva)
-# rm(proy_pen_vivos)
-# rm(proy_pen_dead)
-# rm(get_qx)
-# rm(proy_emp_vivos)
+rm(proy_emp_muerta)
+rm(proy_per_viva)
+rm(proy_per_muerta)
+rm(proy_emp_viva)
+rm(proy_pen_viva)
+rm(proy_pen_muerta)
+rm(t)
+rm(proy_emp_dead)
+rm(proy_viva)
+rm(proy_pen_vivos)
+rm(proy_pen_dead)
+rm(get_qx)
+rm(proy_emp_vivos)
 ```
 
 # Proyección financiera
@@ -492,8 +488,10 @@ proy_emp_vp <- function(df){
 
 ### Observaciones
 ```{r}
-proy_hombres$proy_emp_vp <- round(proy_emp_vp(proy_hombres),2)
-proy_mujeres$proy_emp_vp <- round(proy_emp_vp(proy_mujeres),2)
+proy_H_fin <- data.frame(edad = 0:100)
+proy_M_fin <- data.frame(edad = 0:100)
+proy_H_fin$proy_emp_vp <- round(proy_emp_vp(proy_hombres),2)
+proy_M_fin$proy_emp_vp <- round(proy_emp_vp(proy_mujeres),2)
 ```
 
 ## Proyección financiera de los pagos de beneficio de muerte de empleados activos
@@ -510,8 +508,8 @@ proy_emp_fin <- function(df){
 
 ### Observaciones
 ```{r}
-proy_hombres$proy_emp_fin <- round(proy_emp_fin(proy_hombres),2)
-proy_mujeres$proy_emp_fin <- round(proy_emp_fin(proy_mujeres),2)
+proy_H_fin$proy_emp_fin <- round(proy_emp_fin(proy_hombres),2)
+proy_M_fin$proy_emp_fin <- round(proy_emp_fin(proy_mujeres),2)
 ```
 
 ## Proyección del VP de los pagos de beneficio de muerte de pensionado
@@ -528,8 +526,8 @@ proy_pen_vp <- function(df){
 
 ### Observaciones
 ```{r}
-proy_hombres$proy_pen_vp <- round(proy_pen_vp(proy_hombres),2)
-proy_mujeres$proy_pen_vp <- round(proy_pen_vp(proy_mujeres),2)
+proy_H_fin$proy_pen_vp <- round(proy_pen_vp(proy_hombres),2)
+proy_M_fin$proy_pen_vp <- round(proy_pen_vp(proy_mujeres),2)
 ```
 
 ## Proyección financiera de los pagos de beneficio de muerte de pensionado
@@ -546,8 +544,8 @@ proy_pen_fin <- function(df){
 
 ### Observaciones
 ```{r}
-proy_hombres$proy_pen_fin <- round(proy_pen_fin(proy_hombres),2)
-proy_mujeres$proy_pen_fin <- round(proy_pen_fin(proy_mujeres),2)
+proy_H_fin$proy_pen_fin <- round(proy_pen_fin(proy_hombres),2)
+proy_M_fin$proy_pen_fin <- round(proy_pen_fin(proy_mujeres),2)
 ```
 
 ## Proyección del VP de los pagos de beneficio de anualidades
@@ -568,8 +566,8 @@ proy_ann_vp <- function(df){
 
 ### Observaciones
 ```{r}
-proy_hombres$proy_ann_vp <- round(proy_ann_vp(proy_hombres),2)
-proy_mujeres$proy_ann_vp <- round(proy_ann_vp(proy_mujeres),2)
+proy_H_fin$proy_ann_vp <- round(proy_ann_vp(proy_hombres),2)
+proy_M_fin$proy_ann_vp <- round(proy_ann_vp(proy_mujeres),2)
 ```
 ## Proyección de los pagos de beneficio de anualidades
 ```{r}
@@ -584,33 +582,63 @@ proy_ann_fin <- function(df){
 
 ### Observaciones
 ```{r}
-proy_hombres$proy_ann_fin <- round(proy_ann_fin(proy_hombres),0)
-proy_mujeres$proy_ann_fin <- round(proy_ann_fin(proy_mujeres),0)
+proy_H_fin$proy_ann_fin <- round(proy_ann_fin(proy_hombres),0)
+proy_M_fin$proy_ann_fin <- round(proy_ann_fin(proy_mujeres),0)
 ```
+
+
+
+# Resumir los resultados financieros
+
+## Sumar los resultados
+```{r}
+proy_hombres$valor_fin <- proy_H_fin$proy_emp_fin + proy_H_fin$proy_pen_fin + proy_H_fin$proy_ann_fin
+proy_hombres$valor_p <- proy_H_fin$proy_emp_vp + proy_H_fin$proy_pen_vp + proy_H_fin$proy_ann_vp
+proy_mujeres$valor_fin <- proy_M_fin$proy_emp_fin + proy_M_fin$proy_pen_fin + proy_M_fin$proy_ann_fin
+proy_mujeres$valor_p <- proy_M_fin$proy_emp_vp + proy_M_fin$proy_pen_vp + proy_M_fin$proy_ann_vp
+```
+
+## Graficar
+```{r}
+ggplot() +
+  geom_line(data = proy_hombres,
+            aes(x = edad, y = valor_fin/1000000, color = "hombres"),
+            size = 1) +
+  geom_line(data = proy_mujeres,
+            aes(x = edad, y = valor_fin/1000000, color = "mujeres"),
+            size = 1) +
+  scale_color_manual(
+    values = c(
+      "hombres" = "royalblue",
+      "mujeres" = "purple"
+    )
+  ) +
+  labs(
+    x = "Año",
+    y = "Monto (millones)",
+    title = "Proyección financiera por edad y sexo, en millones",
+    color = "Sexo"
+  ) +
+  theme_minimal() +
+  theme(legend.position = 'bottom')
+```
+Este comportamiento se da porque primero los hombres se mueren más temprano, entonces esos 5 millones evalúan más la remuneración. Pasado ese punto, aproximadamente 45 años, entonces ya no existe esa remuneración, por la cual la pensión tomará peso y por lo tanto costará más pagarle a las mujeres. 
+
+
+```{r}
+rm(proy_ann_fin)
+rm(proy_ann_vp)
+rm(proy_emp_fin)
+rm(proy_emp_vp)
+rm(proy_pen_fin)
+rm(proy_pen_vp)
+rm(proy_H_fin)
+rm(proy_M_fin)
+
+```
+
 
 # Cálculo de la prima anual
-
-Hay que comprender los casos específicos. Por ejemplo, cuál es el valor de la pensión para cada persona en cada tiempo, cuánto del monto principal vale para el valor futuro de la pensión, entre otros aspectos
-
-## Suma de los valores presentes
-```{r}
-suma_vp_h <- sum(proy_hombres$proy_ben_ann) + 
-  sum(proy_hombres$proy_ben_emp) + 
-  sum(proy_hombres$proy_ben_pen)
-
-suma_vp_m <- sum(proy_mujeres$proy_ben_ann) + 
-  sum(proy_mujeres$proy_ben_emp) + 
-  sum(proy_mujeres$proy_ben_pen)
-```
-
-
-```{r}
-EdadesH <- ABC[ABC$Sexo == 1,] %>% count(Edad)
-EdadesM <- ABC[ABC$Sexo == 2,] %>% count(Edad)
-```
-
-
-## Cálculo explícito
 
 ```{r}
 
@@ -623,9 +651,7 @@ primas <- function(qx){
     if(i != 1) {
       ant <-qx[[i-1]]
       if((x[[2]] == ant[[2]]) & (x[[3]] == ant[[3]])){
-        df$edad[c] <- df$edad[c-1]
-        df$sexo[c] <- df$sexo[c-1]
-        df$prima[c] <- df$prima[c-1]
+        df[c,] <-df[c-1,]
         c <- c+1
         next
       }
@@ -647,25 +673,149 @@ primas <- function(qx){
         VP_agui <- 150000*(1-(1/1.07))/(1.07^(1/2) - 1)
         VP <- VP_ann + VP_agui
         vp_pen <- vp_pen + px_acum *(1 - x[[1]][[j]])*1000000*(1.03/1.07)^(j-1)
-        vp_pen <- vp_pen + px_acum *(1 - x[[1]][[j]])*VP*(1.03/1.07)^(j-1)
+        vp_pen <- vp_pen + px_acum *(x[[1]][[j]])*VP*(1.03/1.07)^(j-1)
       }
-      
+      px_acum <- px_acum *(x[[1]][[j]])
       
       
     }
     
     # Y luego el cálculo de las primas
+    # se hace el supuesto que se aporta la primera vez al final de año
+    # pero no se evalúa ese año. Se empezaría a evaluar si son 2 años
+    
+    annuity <- (1-(1.03/1.07)^(65 - x[[3]]))/(((1.07/1.03)-1)*(1.03/1.07))
+    
     
     df$edad[c] <- x[[3]]
     df$sexo[c] <- x[[2]]
-    df$prima[c] <- vp_pen
+    df$vp[c] <- vp_pen
+    df$anualidad[c] <- annuity
+    df$prima[c] <- vp_pen/annuity
     c <- c+1
   }
   return(df)
 }
-
+primas_anuales <- primas(qx)
+primas_anuales <- primas_anuales %>% arrange(edad) %>% distinct()
 ```
 
+# Resumir la prima anual
+
+```{r}
+ggplot() +
+  geom_line(data = primas_anuales[primas_anuales$sexo == 1,],
+            aes(x = edad, y = prima/1000000, color = "hombres"),
+            size = 1) +
+  geom_line(data = primas_anuales[primas_anuales$sexo == 2,],
+            aes(x = edad, y = prima/1000000, color = "mujeres"),
+            size = 1) +
+  scale_color_manual(
+    values = c(
+      "hombres" = "royalblue",
+      "mujeres" = "purple"
+    )
+  ) +
+  labs(
+    x = "Año",
+    y = "Monto (millones)",
+    title = "Primas anuales por edad y sexo, en millones",
+    color = "Sexo"
+  ) +
+  theme_minimal() +
+  theme(legend.position = 'bottom')
+```
+
+```{r}
+ggplot() +
+  geom_line(data = primas_anuales[primas_anuales$sexo == 1,],
+            aes(x = edad, y = prima/1000000, color = "hombres"),
+            size = 1) +
+  geom_line(data = primas_anuales[primas_anuales$sexo == 2,],
+            aes(x = edad, y = prima/1000000, color = "mujeres"),
+            size = 1) +
+  scale_color_manual(
+    values = c(
+      "hombres" = "royalblue",
+      "mujeres" = "purple"
+    )
+  ) +
+  labs(
+    x = "Año",
+    y = "Monto (millones)",
+    title = "Primas anuales por sexo, de 20 a 50 años, en millones",
+    color = "Sexo"
+  ) +
+  theme_minimal() +
+  theme(legend.position = 'bottom') +
+  xlim(20,50) +
+  ylim(0, 3)
+```
+
+```{r}
+ggplot() +
+  geom_line(data = primas_anuales[primas_anuales$sexo == 1,],
+            aes(x = edad, y = prima/1000000, color = "hombres"),
+            size = 1) +
+  geom_line(data = primas_anuales[primas_anuales$sexo == 2,],
+            aes(x = edad, y = prima/1000000, color = "mujeres"),
+            size = 1) +
+  scale_color_manual(
+    values = c(
+      "hombres" = "royalblue",
+      "mujeres" = "purple"
+    )
+  ) +
+  labs(
+    x = "Año",
+    y = "Monto (millones)",
+    title = "Primas anuales por sexo, de 50 a 64 años, en millones",
+    color = "Sexo"
+  ) +
+  theme_minimal() +
+  theme(legend.position = 'bottom') +
+  xlim(50,64) +
+  ylim(0, 60)
+```
+
+```{r}
+ggplot() +
+  geom_line(data = log(primas_anuales[primas_anuales$sexo == 1,]),
+            aes(x = edad, y = prima, color = "hombres"),
+            size = 1) +
+  geom_line(data = log(primas_anuales[primas_anuales$sexo == 2,]),
+            aes(x = edad, y = prima, color = "mujeres"),
+            size = 1) +
+  scale_color_manual(
+    values = c(
+      "hombres" = "royalblue",
+      "mujeres" = "purple"
+    )
+  ) +
+  labs(
+    x = "Año",
+    y = "Monto(log)",
+    title = "Primas anuales por edad y sexo, en logaritmo",
+    color = "Sexo"
+  ) +
+  theme_minimal() +
+  theme(legend.position = 'bottom') 
+```
+```{r}
+rm(primas)
+```
+
+
+# Cálculo de la prima nivelada
+
+## Suma de los valores presentes
+```{r}
+suma_vp <- sum(proy_hombres$valor_p) + sum(proy_mujeres$valor_p) 
+# suma_check <- sum(primas(qx)$vp)
+prima_nivelada <- suma_vp/sum(primas(qx)$anualidad)
+```
+
+La prima nivelada entonces da 1.2 millones de colones anuales, o 98 mil colones al mes.
 
 
 
