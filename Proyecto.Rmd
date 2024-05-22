@@ -820,16 +820,186 @@ ggplot() +
 
 La prima nivelada entonces da 1.2 millones de colones anuales aproximadamente, o 98 mil colones al mes.
 
+# Prueba de métodos diferentes
 
+## Modificación de la función primas
 
+```{r}
+primas_esp <- function(qx, m_p, m_me, m_mp){
+  c <- 1
+  df = data.frame(edad = numeric(500), sexo = numeric(500), prima = numeric(500))
+  for (i in 1:500){
+    x <- qx[[i]]
+    if(i != 1) {
+      ant <-qx[[i-1]]
+      if((x[[2]] == ant[[2]]) & (x[[3]] == ant[[3]])){
+        df[c,] <-df[c-1,]
+        c <- c+1
+        next
+      }
+    } 
+    vp_pen <- 0
+    px_acum <- 1
+    for (j in 1:length(x[[1]])) {
+      vp_pen <- vp_pen 
+      if (j + x[[3]] <= 65){
+        vp_pen <- vp_pen + px_acum *(1 - x[[1]][[j]])*m_me*(1.03/1.07)^(j-1)
+      } else {
+        interes <- 1.07^(1/12) - 1
+        VP_ann <- m_p*(1-(1/1.07))/interes
+        VP_agui <- m_p/2*(1-(1/1.07))/(1.07^(1/2) - 1)
+        VP <- VP_ann + VP_agui
+        vp_pen <- vp_pen + px_acum *(1 - x[[1]][[j]])*m_mp*(1.03/1.07)^(j-1)
+        vp_pen <- vp_pen + px_acum *(x[[1]][[j]])*VP*(1.03/1.07)^(j-1)
+      }
+      px_acum <- px_acum *(x[[1]][[j]])
+      
+      
+    }
+    annuity <- (1-(1.03/1.07)^(65 - x[[3]]))/(((1.07/1.03)-1)*(1.03/1.07))
 
+df$edad[c] <- x[[3]]
+    df$sexo[c] <- x[[2]]
+    df$vp[c] <- vp_pen
+    df$anualidad[c] <- annuity
+    df$prima[c] <- vp_pen/annuity
+    c <- c+1
+  }
+  return(df)
+}
+```
 
+```{r}
+(sum(primas_esp(qx, 300000, 5000000, 1000000)$vp))
+metodo0 <- primas_esp(qx, 300000, 5000000, 1000000)$prima
+```
 
+## Método 1
+Para la reducción de las primas, tendremos que comparar entre métodos. Por ejemplo, propongamos en reducir la pensión lo necesario, usando aproximación manual
+```{r}
+metodo1 <- primas_esp(qx, 269181, 5000000, 1000000)$prima
+sum(metodo1/metodo0 <=0.9)/length(metodo0) # si da 1, todos coinciden
+mean(metodo1/metodo0) # esta cantidad es para resumir, se cumple lo de arriba
+```
+## Método 2
+Ahora bien, reduzca aún más el monto de la pensión, pero duplique los otros montos
+```{r}
+metodo2 <- primas_esp(qx, 261000, 10000000, 2000000)$prima # dio cerrado
+sum(metodo2/metodo0 <=0.9)/length(metodo0) 
+```
 
+## Métodos alternativos
 
+Observe que la diferencia es muy poca, las mortalidades de empleados y pensionados aportan muy poco. Reducir estas a 0 no influye mucho
 
+```{r}
+mean(primas_esp(qx, 300000, 0, 0)$prima/metodo0)
+```
 
+Entonces una opción sería aumentar más o igualar los montos de muerte
+```{r}
+metodo3 <- primas_esp(qx, 250104, 7500000, 7500000)$prima
+sum(metodo3/metodo0 <=0.9)/length(metodo0) 
+mean(metodo3/metodo0)
+```
+Note que esta media da un poquito más alto, entonces es un poco peor para la empresa. Calculemos un monto que baje más bien la media, pero todos se reduzcan en un 10%
 
+```{r}
+metodo4 <- primas_esp(qx, 207552, 30000000, 15000000)$prima
+sum(metodo4/metodo0 <=0.9)/length(metodo0)
+mean(metodo4/metodo0)
+```
+
+```{r}
+rm(metodo0)
+rm(metodo1)
+rm(metodo2)
+rm(metodo3)
+rm(metodo4)
+rm(primas_esp)
+rm(suma_check)
+rm(suma_vp)
+rm(prima_nivelada)
+```
+
+# Modelo estocástico
+
+Para la construcción de un modelo estocástico ocuparemos:
+
+1) las probabilidades de muerte (qx)
+2) las personas, dadas por runif
+3) Pagar los montos respectivos, dependiendo de la muerte o no
+
+```{r}
+anualidades <- primas(qx)$anualidad
+edades <- numeric(500)
+sexo <- numeric(500)
+for (c in 1:500){
+  edades[c] <- qx[[c]][[3]]
+  sexo[c] <- qx[[c]][[2]]
+}
+VP <- (300000*(1-(1/1.07)))/(1.07^(1/12) - 1) + 150000*(1-(1/1.07))/(1.07^(1/2) - 1)
+```
+
+```{r}
+simulacion <- function(qx){
+  vivos <- numeric(500) + 1
+  pen <- numeric(500)
+  suma_vp <- numeric(500)
+  for (i in 1:96){
+    dif <- (1.03/1.07)^(i-1)
+    for (c in 1:500){
+      if(vivos[c] == 0 | i > length(qx[[c]][[1]])){
+        next
+      }
+      if(qx[[c]][[3]] + i > 65){
+        pen[c] <- 1
+      }
+      if(vivos[c] == 1){
+        if(runif(1) > qx[[c]][[1]][[i]]){
+          vivos[c] <- 0
+          if(pen[c] == 1){
+            suma_vp[c] <- suma_vp[c] + 1000000*dif
+          } else {
+            suma_vp[c] <- suma_vp[c] + 5000000*dif
+          }
+        }
+      }
+      suma_vp[c] <- suma_vp[c] + pen[c]*vivos[c]*VP*dif
+    }
+  }
+
+  df <- data.frame(edades, sexo, prima = suma_vp/anualidades)
+  df <- df %>% 
+    arrange(edades, sexo) %>%
+    group_by(edades, sexo) %>%
+    summarise(primas = mean(prima), .groups = "drop") %>% 
+    select(primas)
+  return(df[[1]])
+}
+```
+
+```{r}
+t <- proc.time()
+simulacion(qx)
+proc.time() - t
+```
+
+```{r}
+# t <- proc.time()
+# simulaciones <- list()
+# for(i in 1:100000){
+#   print(i)
+#   simulaciones[[i]] <- simulacion(qx)
+# }
+# proc.time() - t
+```
+
+```{r}
+# exportar <- data.frame(primas_anuales[,1:2], simulaciones)
+# names(exportar) <- c("edad", "sexo", 1:100000)
+# write.csv(exportar,"simulaciones.csv")
+```
 
 
 
