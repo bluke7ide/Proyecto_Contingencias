@@ -932,6 +932,8 @@ Para la construcción de un modelo estocástico ocuparemos:
 3) Pagar los montos respectivos, dependiendo de la muerte o no
 
 ```{r}
+lista_90 <- data.frame(Edad = primas_anuales$edad, Sexo = primas_anuales$sexo)
+qx_unicos <- get_qx(lista_90, SUPEN_num)
 anualidades <- primas_anuales$anualidad
 edades <- numeric(90)
 sexo <- numeric(90)
@@ -977,10 +979,7 @@ simulacion <- function(df){
 }
 ```
 
-```{r}
-lista_90 <- data.frame(Edad = primas_anuales$edad, Sexo = primas_anuales$sexo)
-qx_unicos <- get_qx(lista_90, SUPEN_num)
-```
+
 
 ```{r}
 t <- proc.time()
@@ -1008,7 +1007,7 @@ La función dura 30 min, o 26 min aproximadamente
 
 ## Revertir el cambio e importar los datos
 ```{r}
-datos_sim <- read_csv("simulaciones.csv") %>% select(-`...1`)
+datos_sim <- read_csv("simulaciones.csv", show_col_types = FALSE) %>% select(-`...1`)
 ```
 
 
@@ -1016,7 +1015,6 @@ datos_sim <- read_csv("simulaciones.csv") %>% select(-`...1`)
 t <- proc.time()
 percentiles <- data.frame(primas_anuales[,1:2])
 for (i in 1:90){
-  print(i)
   temp <- as.numeric(datos_sim[i,3:100002])
   percentiles$per_50[i] <- quantile(temp, 0.5)
   percentiles$per_90[i] <- quantile(temp, 0.9)
@@ -1033,7 +1031,6 @@ rm(t)
 rm(sexo)
 rm(edades)
 rm(anualidades)
-rm(simulaciones)
 rm(lista_90)
 ```
 # Comparación de primas
