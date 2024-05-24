@@ -17,6 +17,7 @@ output:
 # Importar y descargar los datos
 ```{r, warning=FALSE}
 library(readxl)
+library(readr)
 library(tidyverse)
 library(ggplot2)
 ABC <- read_excel("Base de datos.xlsx")
@@ -468,7 +469,6 @@ rm(proy_emp_dead)
 rm(proy_viva)
 rm(proy_pen_vivos)
 rm(proy_pen_dead)
-rm(get_qx)
 rm(proy_emp_vivos)
 ```
 
@@ -920,6 +920,7 @@ rm(primas_esp)
 rm(suma_check)
 rm(suma_vp)
 rm(prima_nivelada)
+rm(primas)
 ```
 
 # Modelo estocástico
@@ -931,32 +932,33 @@ Para la construcción de un modelo estocástico ocuparemos:
 3) Pagar los montos respectivos, dependiendo de la muerte o no
 
 ```{r}
-anualidades <- primas(qx)$anualidad
-edades <- numeric(500)
-sexo <- numeric(500)
-for (c in 1:500){
-  edades[c] <- qx[[c]][[3]]
-  sexo[c] <- qx[[c]][[2]]
+anualidades <- primas_anuales$anualidad
+edades <- numeric(90)
+sexo <- numeric(90)
+for (c in 1:90){
+  edades[c] <- qx_unicos[[c]][[3]]
+  sexo[c] <- qx_unicos[[c]][[2]]
 }
 VP <- (300000*(1-(1/1.07)))/(1.07^(1/12) - 1) + 150000*(1-(1/1.07))/(1.07^(1/2) - 1)
 ```
 
+## Creando la función de simulación
 ```{r}
-simulacion <- function(qx){
-  vivos <- numeric(500) + 1
-  pen <- numeric(500)
-  suma_vp <- numeric(500)
+simulacion <- function(df){
+  vivos <- numeric(length(df)) + 1
+  pen <- numeric(length(df))
+  suma_vp <- numeric(length(df))
   for (i in 1:96){
     dif <- (1.03/1.07)^(i-1)
-    for (c in 1:500){
-      if(vivos[c] == 0 | i > length(qx[[c]][[1]])){
+    for (c in 1:length(df)){
+      if(vivos[c] == 0 | i > length(df[[c]][[1]])){
         next
       }
-      if(qx[[c]][[3]] + i > 65){
+      if(df[[c]][[3]] + i > 65){
         pen[c] <- 1
       }
       if(vivos[c] == 1){
-        if(runif(1) > qx[[c]][[1]][[i]]){
+        if(runif(1) > df[[c]][[1]][[i]]){
           vivos[c] <- 0
           if(pen[c] == 1){
             suma_vp[c] <- suma_vp[c] + 1000000*dif
@@ -969,38 +971,251 @@ simulacion <- function(qx){
     }
   }
 
-  df <- data.frame(edades, sexo, prima = suma_vp/anualidades)
-  df <- df %>% 
-    arrange(edades, sexo) %>%
-    group_by(edades, sexo) %>%
-    summarise(primas = mean(prima), .groups = "drop") %>% 
-    select(primas)
+  df <- data.frame(prima = suma_vp/anualidades)
+
   return(df[[1]])
 }
 ```
 
 ```{r}
-t <- proc.time()
-simulacion(qx)
-proc.time() - t
+lista_90 <- data.frame(Edad = primas_anuales$edad, Sexo = primas_anuales$sexo)
+qx_unicos <- get_qx(lista_90, SUPEN_num)
 ```
 
+```{r}
+t <- proc.time()
+a <- simulacion(qx_unicos)
+proc.time() - t
+```
+## Las simulaciones
+La función dura 30 min, o 26 min aproximadamente
 ```{r}
 # t <- proc.time()
 # simulaciones <- list()
 # for(i in 1:100000){
 #   print(i)
-#   simulaciones[[i]] <- simulacion(qx)
+#   simulaciones[[i]] <- simulacion(qx_unicos)
 # }
 # proc.time() - t
 ```
 
+## Proceder a escribir la data para guardarla
 ```{r}
-# exportar <- data.frame(primas_anuales[,1:2], simulaciones)
-# names(exportar) <- c("edad", "sexo", 1:100000)
-# write.csv(exportar,"simulaciones.csv")
+# datos_sim <- data.frame(primas_anuales[,1:2], simulaciones)
+# names(datos_sim) <- c("edad", "sexo", 1:100000)
+# write.csv(datos_sim,"simulaciones.csv")
 ```
 
+## Revertir el cambio e importar los datos
+```{r}
+datos_sim <- read_csv("simulaciones.csv") %>% select(-`...1`)
+```
+
+
+```{r}
+t <- proc.time()
+percentiles <- data.frame(primas_anuales[,1:2])
+for (i in 1:90){
+  print(i)
+  temp <- as.numeric(datos_sim[i,3:100002])
+  percentiles$per_50[i] <- quantile(temp, 0.5)
+  percentiles$per_90[i] <- quantile(temp, 0.9)
+}
+proc.time() - t
+```
+
+```{r}
+rm(i)
+rm(get_qx)
+rm(simulacion)
+rm(VP)
+rm(t)
+rm(sexo)
+rm(edades)
+rm(anualidades)
+rm(simulaciones)
+rm(lista_90)
+```
+# Comparación de primas
+```{r}
+primas_finales <- primas_anuales[,1:3]
+primas_finales$per_50 <- percentiles$per_50
+primas_finales$per_90 <- percentiles$per_90
+```
+
+```{r, warning=FALSE}
+ggplot() +
+  geom_line(data = primas_finales[primas_finales$sexo == 1,],
+            aes(x = edad, y = prima/1000000, color = "determinístico"),
+            size = 1) +
+  geom_line(data = primas_finales[primas_finales$sexo == 1,],
+            aes(x = edad, y = per_50/1000000, color = "estocástico - per50"),
+            size = 1) +
+  geom_line(data = primas_finales[primas_finales$sexo == 1,],
+          aes(x = edad, y = per_90/1000000, color = "estocástico - per90"),
+          size = 1) +
+  scale_color_manual(
+    values = c(
+      "determinístico" = "lightblue",
+      "estocástico - per50" = "royalblue",
+      "estocástico - per90" = "darkblue"
+    )
+  ) +
+  labs(
+    x = "Edad",
+    y = "Monto",
+    title = "Primas para hombres de edades 20-50",
+    color = "Tipo de prima"
+  ) +
+  theme_minimal() +
+  theme(legend.position = 'bottom') +
+  xlim(20,50) +
+  ylim(0,5)
+```
+
+```{r, warning=FALSE}
+ggplot() +
+  geom_line(data = primas_finales[primas_finales$sexo == 1,],
+            aes(x = edad, y = prima/1000000, color = "determinístico"),
+            size = 1) +
+  geom_line(data = primas_finales[primas_finales$sexo == 1,],
+            aes(x = edad, y = per_50/1000000, color = "estocástico - per50"),
+            size = 1) +
+  geom_line(data = primas_finales[primas_finales$sexo == 1,],
+          aes(x = edad, y = per_90/1000000, color = "estocástico - per90"),
+          size = 1) +
+  scale_color_manual(
+    values = c(
+      "determinístico" = "lightblue",
+      "estocástico - per50" = "royalblue",
+      "estocástico - per90" = "darkblue"
+    )
+  ) +
+  labs(
+    x = "Edad",
+    y = "Monto",
+    title = "Primas para hombres de edades 50-65, en millones",
+    color = "Tipo de prima"
+  ) +
+  theme_minimal() +
+  theme(legend.position = 'bottom') +
+  xlim(50,65) +
+  ylim(2,80)
+```
+```{r, warning=FALSE}
+ggplot() +
+  geom_line(data = primas_finales[primas_finales$sexo == 1,],
+            aes(x = edad, y = per_90 - prima, color = "estocástico - per90"),
+            size = 1) +
+  geom_line(data = primas_finales[primas_finales$sexo == 1,],
+            aes(x = edad, y = per_50 - prima, color = "estocástico - per50"),
+            size = 1) +
+  scale_color_manual(
+    values = c(
+      "estocástico - per90" = "darkorange",
+      "estocástico - per50" = "orange"
+    )
+  ) +
+  labs(
+    x = "Edad",
+    y = "Monto",
+    title = "Diferencias en las primas, para hombres entre 20 y 60 años",
+    color = "Tipo de prima"
+  ) +
+  theme_minimal() +
+  theme(legend.position = 'bottom') +
+  xlim(20,65) +
+  ylim(0,5000000)
+```
+Nótesen las diferentes curvas visibles, como en la división de 47-48 en el percentil 50 y el quiebre en 42 en el percentil 90.
+
+```{r, warning=FALSE}
+ggplot() +
+  geom_line(data = primas_finales[primas_finales$sexo == 2,],
+            aes(x = edad, y = prima/1000000, color = "determinístico"),
+            size = 1) +
+  geom_line(data = primas_finales[primas_finales$sexo == 2,],
+            aes(x = edad, y = per_50/1000000, color = "estocástico - per50"),
+            size = 1) +
+  geom_line(data = primas_finales[primas_finales$sexo == 2,],
+          aes(x = edad, y = per_90/1000000, color = "estocástico - per90"),
+          size = 1) +
+  scale_color_manual(
+    values = c(
+      "determinístico" = "lightpink",
+      "estocástico - per50" = "purple",
+      "estocástico - per90" = "red"
+    )
+  ) +
+  labs(
+    x = "Edad",
+    y = "Monto",
+    title = "Primas para mujeres de edades 20-50, en millones",
+    color = "Tipo de prima"
+  ) +
+  theme_minimal() +
+  theme(legend.position = 'bottom') +
+  xlim(20,50) +
+  ylim(0,5)
+```
+
+```{r, warning=FALSE}
+ggplot() +
+  geom_line(data = primas_finales[primas_finales$sexo == 2,],
+            aes(x = edad, y = prima/1000000, color = "determinístico"),
+            size = 1) +
+  geom_line(data = primas_finales[primas_finales$sexo == 2,],
+            aes(x = edad, y = per_50/1000000, color = "estocástico - per50"),
+            size = 1) +
+  geom_line(data = primas_finales[primas_finales$sexo == 2,],
+          aes(x = edad, y = per_90/1000000, color = "estocástico - per90"),
+          size = 1) +
+  scale_color_manual(
+    values = c(
+      "determinístico" = "lightpink",
+      "estocástico - per50" = "purple",
+      "estocástico - per90" = "red"
+    )
+  ) +
+  labs(
+    x = "Edad",
+    y = "Monto",
+    title = "Primas para mujeres de edades 50-65, en millones",
+    color = "Tipo de prima"
+  ) +
+  theme_minimal() +
+  theme(legend.position = 'bottom') +
+  xlim(50,65) +
+  ylim(2,80)
+```
+
+```{r, warning=FALSE}
+ggplot() +
+  geom_line(data = primas_finales[primas_finales$sexo == 2,],
+            aes(x = edad, y = per_90 - prima, color = "estocástico - per90"),
+            size = 1) +
+  geom_line(data = primas_finales[primas_finales$sexo == 2,],
+            aes(x = edad, y = per_50 - prima, color = "estocástico - per50"),
+            size = 1) +
+  scale_color_manual(
+    values = c(
+      "estocástico - per90" = "slateblue2",
+      "estocástico - per50" = "mediumpurple1"
+    )
+  ) +
+  labs(
+    x = "Edad",
+    y = "Monto",
+    title = "Diferencias en las primas, para mujeres entre 20 y 60 años",
+    color = "Tipo de prima"
+  ) +
+  theme_minimal() +
+  theme(legend.position = 'bottom') +
+  xlim(20,65) +
+  ylim(0,5000000)
+```
+
+No lograría explicar el comportamiento quebrado en la simulación, más que un posible error en los cálculos cometidos, o algún comportamiento extraño casuístico que suceda cuando se trabaje con estas edades, parece ser 58 y 59. Lo más extraño es que en el percentil 90 no se observa el comportamiento, significando que es un problema local del percentil 50. Puede ser una edad selecta, pero se vería afectado en la prima regular, inclusive alguna coincidencia con la estructura de la semilla por default, pero todas suenan muy improbables. Tal vez los quiebres existen en todas partes, solo que se nota más en este caso particular. 
 
 
 
