@@ -13,6 +13,9 @@ output:
     default_style: "dark"
     downcute_theme: "chaos"
 ---
+```{r setup, include=FALSE}
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+```
 
 # Importar y descargar los datos
 ```{r, warning=FALSE}
@@ -20,10 +23,11 @@ library(readxl)
 library(readr)
 library(tidyverse)
 library(ggplot2)
-ABC <- read_excel("Base de datos.xlsx")
-SUPEN <- read_excel("tavid2000-2150.xls")
+ABC <- read_excel("data/Base de datos.xlsx")
+SUPEN <- read_excel("data/tavid2000-2150.xls")
 SUPEN_num <- as.data.frame(lapply(SUPEN, as.numeric), stringsAsFactors = FALSE)
 ```
+
 ## Transformaciones menores
 ```{r}
 ABC$Edad = 2023 - as.double(format(ABC$`Fecha de nacimiento`, format="%Y"))
@@ -47,7 +51,7 @@ get_qx <- function(df_obs, df_prob){
         next
       }
     } 
-    y <- 2023
+    y <- 2024 # modificación puesto estaba en 2023
     df <- df_prob[df_prob$sex == df_obs$Sexo[i],]
     local_qx <- list()
     n <- 1
@@ -75,8 +79,8 @@ t <- proc.time()
 qx <- get_qx(ABC, SUPEN_num)
 proc.time() - t
 ```
-# Proyecciones demográficas
 
+# Proyecciones demográficas
 ## Función madre: observar las posibilidades de vivir
 ```{r}
 proy_per_viva <- data.frame(edad = 0:100, poblacionM = numeric(101), poblacionH = numeric(101))
@@ -305,7 +309,6 @@ proy_pen_muerta$poblacionH <- round(proy_pen_muerta$poblacionH, 8)
 ```
 
 # Resumir los resultados demográficos
-
 ## En la proyección de mujeres
 ```{r}
 proy_mujeres <- data.frame(
@@ -445,13 +448,13 @@ ggplot() +
 
 ## Verificar los resultados
 ```{r}
-# proy_hombres$suma = proy_hombres$proy_emp_vivos + 
-#   proy_hombres$proy_pen_vivos + 
+# suma_hombres <- proy_hombres$proy_emp_vivos +
+#   proy_hombres$proy_pen_vivos +
 #   proy_hombres$proy_emp_muertos +
 #   proy_hombres$proy_pen_muertos
 # 
-# proy_mujeres$suma = proy_mujeres$proy_emp_vivas + 
-#   proy_mujeres$proy_pen_vivas + 
+# suma_mujeres <- proy_mujeres$proy_emp_vivas +
+#   proy_mujeres$proy_pen_vivas +
 #   proy_mujeres$proy_emp_muertas +
 #   proy_mujeres$proy_pen_muertas
 
@@ -473,7 +476,6 @@ rm(proy_emp_vivos)
 ```
 
 # Proyección financiera
-
 ## Proyección del VP de los pagos de beneficio de muerte de empleados activos
 ```{r}
 proy_emp_vp <- function(df){
@@ -555,7 +557,7 @@ proy_ann_vp <- function(df){
   interes <- 1.07^(1/12) - 1
   # se hace el supuesto que paga la primera pensión al final de mes 
   VP_ann <- 300000*(1-(1/1.07))/interes
-  VP_agui <- 150000*(1-(1/1.07))/(1.07^(1/2) - 1)
+  VP_agui <- 300000*(1/1.07) # modificación - aguinaldo a final de año
   VP <- VP_ann + VP_agui
   for (i in 1:100){
     col[i+1] <- col[i+1]*VP*(1.03/1.07)^(i-1)
@@ -569,6 +571,7 @@ proy_ann_vp <- function(df){
 proy_H_fin$proy_ann_vp <- round(proy_ann_vp(proy_hombres),2)
 proy_M_fin$proy_ann_vp <- round(proy_ann_vp(proy_mujeres),2)
 ```
+
 ## Proyección de los pagos de beneficio de anualidades
 ```{r}
 proy_ann_fin <- function(df){
@@ -672,7 +675,7 @@ primas <- function(qx){
         interes <- 1.07^(1/12) - 1
         # se hace el supuesto que paga la primera pensión al final de mes 
         VP_ann <- 300000*(1-(1/1.07))/interes
-        VP_agui <- 150000*(1-(1/1.07))/(1.07^(1/2) - 1)
+        VP_agui <- 300000*(1/1.07) # modificación - aguinaldo a final de año
         VP <- VP_ann + VP_agui
         vp_pen <- vp_pen + px_acum *(1 - x[[1]][[j]])*1000000*(1.03/1.07)^(j-1)
         vp_pen <- vp_pen + px_acum *(x[[1]][[j]])*VP*(1.03/1.07)^(j-1)
@@ -807,12 +810,12 @@ ggplot() +
 
 
 # Prima nivelada
-
 ## Suma de los valores presentes
 ```{r}
 (suma_vp <- sum(proy_hombres$valor_p) + sum(proy_mujeres$valor_p) )
 (suma_check <- sum(primas(qx)$vp))
 ```
+
 ## Cálculo de la prima
 ```{r}
 (prima_nivelada <- suma_vp/sum(primas(qx)$anualidad))
@@ -821,9 +824,7 @@ ggplot() +
 La prima nivelada entonces da 1.2 millones de colones anuales aproximadamente, o 98 mil colones al mes.
 
 # Prueba de métodos diferentes
-
 ## Modificación de la función primas
-
 ```{r}
 primas_esp <- function(qx, m_p, m_me, m_mp){
   c <- 1
@@ -847,7 +848,7 @@ primas_esp <- function(qx, m_p, m_me, m_mp){
       } else {
         interes <- 1.07^(1/12) - 1
         VP_ann <- m_p*(1-(1/1.07))/interes
-        VP_agui <- m_p/2*(1-(1/1.07))/(1.07^(1/2) - 1)
+        VP_agui <- m_p*(1/1.07)
         VP <- VP_ann + VP_agui
         vp_pen <- vp_pen + px_acum *(1 - x[[1]][[j]])*m_mp*(1.03/1.07)^(j-1)
         vp_pen <- vp_pen + px_acum *(x[[1]][[j]])*VP*(1.03/1.07)^(j-1)
@@ -881,17 +882,17 @@ metodo1 <- primas_esp(qx, 269181, 5000000, 1000000)$prima
 sum(metodo1/metodo0 <=0.9)/length(metodo0) # si da 1, todos coinciden
 mean(metodo1/metodo0) # esta cantidad es para resumir, se cumple lo de arriba
 ```
+
 ## Método 2
 Ahora bien, reduzca aún más el monto de la pensión, pero duplique los otros montos
 ```{r}
 metodo2 <- primas_esp(qx, 261000, 10000000, 2000000)$prima # dio cerrado
 sum(metodo2/metodo0 <=0.9)/length(metodo0) 
+mean(metodo2/metodo0)
 ```
 
 ## Métodos alternativos
-
 Observe que la diferencia es muy poca, las mortalidades de empleados y pensionados aportan muy poco. Reducir estas a 0 no influye mucho
-
 ```{r}
 mean(primas_esp(qx, 300000, 0, 0)$prima/metodo0)
 ```
@@ -902,8 +903,8 @@ metodo3 <- primas_esp(qx, 250104, 7500000, 7500000)$prima
 sum(metodo3/metodo0 <=0.9)/length(metodo0) 
 mean(metodo3/metodo0)
 ```
-Note que esta media da un poquito más alto, entonces es un poco peor para la empresa. Calculemos un monto que baje más bien la media, pero todos se reduzcan en un 10%
 
+Note que esta media da un poquito más alto, entonces es un poco peor para la empresa. Calculemos un monto que baje más bien la media, pero todos se reduzcan en un 10%
 ```{r}
 metodo4 <- primas_esp(qx, 207552, 30000000, 15000000)$prima
 sum(metodo4/metodo0 <=0.9)/length(metodo0)
@@ -941,7 +942,7 @@ for (c in 1:90){
   edades[c] <- qx_unicos[[c]][[3]]
   sexo[c] <- qx_unicos[[c]][[2]]
 }
-VP <- (300000*(1-(1/1.07)))/(1.07^(1/12) - 1) + 150000*(1-(1/1.07))/(1.07^(1/2) - 1)
+VP <- (300000*(1-(1/1.07)))/(1.07^(1/12) - 1) + 300000*(1/1.07) # modificación - aguinaldo a final de año)
 ```
 
 ## Creando la función de simulación
@@ -979,13 +980,12 @@ simulacion <- function(df){
 }
 ```
 
-
-
 ```{r}
 t <- proc.time()
 a <- simulacion(qx_unicos)
 proc.time() - t
 ```
+
 ## Las simulaciones
 La función dura 30 min, o 26 min aproximadamente
 ```{r}
@@ -1007,7 +1007,7 @@ La función dura 30 min, o 26 min aproximadamente
 
 ## Revertir el cambio e importar los datos
 ```{r}
-datos_sim <- read_csv("simulaciones.csv", show_col_types = FALSE) %>% select(-`...1`)
+datos_sim <- read_csv("data/simulaciones.csv", show_col_types = FALSE) %>% select(-`...1`)
 ```
 
 
@@ -1033,6 +1033,7 @@ rm(edades)
 rm(anualidades)
 rm(lista_90)
 ```
+
 # Comparación de primas
 ```{r}
 primas_finales <- primas_anuales[,1:3]
@@ -1124,7 +1125,6 @@ ggplot() +
   xlim(20,65) +
   ylim(0,5000000)
 ```
-Nótesen las diferentes curvas visibles, como en la división de 47-48 en el percentil 50 y el quiebre en 42 en el percentil 90.
 
 ```{r, warning=FALSE}
 ggplot() +
@@ -1212,7 +1212,7 @@ ggplot() +
   ylim(0,5000000)
 ```
 
-No lograría explicar el comportamiento quebrado en la simulación, más que un posible error en los cálculos cometidos, o algún comportamiento extraño casuístico que suceda cuando se trabaje con estas edades, parece ser 58 y 59. Lo más extraño es que en el percentil 90 no se observa el comportamiento, significando que es un problema local del percentil 50. Puede ser una edad selecta, pero se vería afectado en la prima regular, inclusive alguna coincidencia con la estructura de la semilla por default, pero todas suenan muy improbables. Tal vez los quiebres existen en todas partes, solo que se nota más en este caso particular. 
+No lograría explicar el comportamiento quebrado en la simulación. Por lo que no hay que incluir estos gráficos.
 
 
 
