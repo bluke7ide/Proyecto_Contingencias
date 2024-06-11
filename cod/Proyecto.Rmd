@@ -219,7 +219,6 @@ proy_pen_viva$poblacionH <- round(proy_pen_viva$poblacionH, 8)
 ## Seccionar a solo empleados muertos
 ```{r}
 proy_emp_muerta <- data.frame(edad = 0:100, poblacionM = numeric(101), poblacionH = numeric(101))
-
 proy_emp_dead <- function(qx, df){
   acumH <- numeric(272) + 1
   acumM <- numeric(228) + 1
@@ -589,10 +588,7 @@ proy_H_fin$proy_ann_fin <- round(proy_ann_fin(proy_hombres),0)
 proy_M_fin$proy_ann_fin <- round(proy_ann_fin(proy_mujeres),0)
 ```
 
-
-
 # Resumir los resultados financieros
-
 ## Sumar los resultados
 ```{r}
 proy_hombres$valor_fin <- proy_H_fin$proy_emp_fin + proy_H_fin$proy_pen_fin + proy_H_fin$proy_ann_fin
@@ -642,10 +638,8 @@ rm(proy_M_fin)
 
 
 # Prima anual
-
 ## Función de la prima
 Va a servir para la nivelada
-
 ```{r}
 primas <- function(qx){
   c <- 1
@@ -706,7 +700,6 @@ primas_anuales <- primas_anuales %>% arrange(edad) %>% distinct()
 ```
 
 ## Resumir la prima anual
-
 ```{r}
 ggplot() +
   geom_line(data = primas_anuales[primas_anuales$sexo == 1,],
@@ -806,8 +799,6 @@ ggplot() +
   theme_minimal() +
   theme(legend.position = 'bottom') 
 ```
-
-
 
 # Prima nivelada
 ## Suma de los valores presentes
@@ -982,7 +973,7 @@ simulacion <- function(df){
 
 ```{r}
 t <- proc.time()
-a <- simulacion(qx_unicos)
+una <- simulacion(qx_unicos)
 proc.time() - t
 ```
 
@@ -1010,7 +1001,7 @@ La función dura 30 min, o 26 min aproximadamente
 datos_sim <- read_csv("data/simulaciones.csv", show_col_types = FALSE) %>% select(-`...1`)
 ```
 
-
+## Cálculo de percentiles
 ```{r}
 t <- proc.time()
 percentiles <- data.frame(primas_anuales[,1:2])
@@ -1023,6 +1014,7 @@ proc.time() - t
 ```
 
 ```{r}
+rm(una)
 rm(i)
 rm(get_qx)
 rm(simulacion)
@@ -1032,6 +1024,7 @@ rm(sexo)
 rm(edades)
 rm(anualidades)
 rm(lista_90)
+rm(temp)
 ```
 
 # Comparación de primas
