@@ -28,99 +28,196 @@ SUPEN <- read_excel("data/tavid2000-2150.xls")
 SUPEN_num <- as.data.frame(lapply(SUPEN, as.numeric), stringsAsFactors = FALSE)
 ```
 
+#Observaciones iniciales
 ## Transformaciones menores
 ```{r}
-ABC$Edad = 2023 - as.double(format(ABC$`Fecha de nacimiento`, format="%Y"))
-ABC[ABC$Sexo == 'M',]$Sexo <- '1'
-ABC[ABC$Sexo == 'F',]$Sexo <- '2'
+#Agregar columna de edad:
+ABC$Edad = 2023 - as.double(format(ABC$`Fecha de nacimiento`, format="%Y")) 
+ABC[ABC$Sexo == 'M',]$Sexo <- 'Hombres' #hombres: 1
+ABC[ABC$Sexo == 'F',]$Sexo <- 'Mujeres'#Mujeres: 2
+
+```
+
+## Transformaciones y visualizaciones iniciales
+```{r}
+
+#Agregar una columna de rango de edad. 
+#Rangos:  20-24, 25-29, 30-34, 35-39, 40-44, 45-49, 50-54, 55-59, 60-64, +65
+breaks<-c(20,24,29,34,39,44,49,54,59,65)
+labels<-c("20-24", "25-29", "30-34", "35-39", "40-44", "45-49", "50-54", "55-59", "60-64")
+ABC$rango_edad<-cut(ABC$Edad, breaks=breaks, labels=labels, right=FALSE)
+
+# Agrupar los datos por rango de edad y sexo, y calcular la frecuencia
+tabla_rangos_sexo <- table(ABC$rango_edad, ABC$Sexo)
+tabla_porcentaje_sexo <- prop.table(tabla_rangos_sexo, margin=1) * 100
+
+
+tabla_rangos_sexo <- data.frame(
+  rango_edad = rep(rownames(tabla_rangos_sexo), times=ncol(tabla_rangos_sexo)),
+  sexo = rep(colnames(tabla_rangos_sexo), each=nrow(tabla_rangos_sexo)),
+  frecuencia = as.vector(tabla_rangos_sexo),
+  porcentaje = round(as.vector(tabla_porcentaje_sexo), 2)
+)
+
+#Observaciones de distribuciones
+ggplot(data=tabla_rangos_sexo, aes(x=rango_edad, y=frecuencia))+
+geom_bar(stat="identity", fill="darkseagreen3")+
+labs(title="Distribución de rangos de edad", x="Edad", y="Frecuencia")+
+theme_minimal()
+
+ggplot(data=tabla_rangos_porcentaje_sexo, aes(x=rango_edad, y=frecuencia, fill=sexo)) +
+  geom_bar(stat="identity", position="dodge") +
+  labs(title="Distribución de rangos de edad por sexo", x="Edad", y="Frecuencia") +
+  scale_fill_manual(name="Sexo", values=c("Hombres"="steelblue3", "Mujeres"="hotpink3"), labels=c("Hombres", "Mujeres"))+
+  theme_minimal()
+```
+
+## Transformaciones menores finales
+```{r}
+ABC[ABC$Sexo == 'Hombres',]$Sexo <- 1 #hombres: 1
+ABC[ABC$Sexo == 'Mujeres',]$Sexo <- 2#Mujeres: 2
 ABC$Sexo <- as.double(ABC$Sexo) 
 ```
 
+
 # Función para recolectar los qx de un df agrupado
 ```{r}
+#' Calcula las probabilidades de vida para todos los años de cada persona
+#' @param df_obs caracteristicas de cada persona
+#' @param df_prob tabla dinámica de las proabilidades de muerte
+#' @return all_qx (una lista que adentro contiene: 1. Una lista con las probabilidades de sobrevivencia para cada persona. 2. El sexo. 3. La edad)
 get_qx <- function(df_obs, df_prob){
-  c <- 1
+  c <- 1 #Contador para las personas
+  
+  #se genera la lista vacía que vamos a devolver
   all_qx = list()
-  for (i in 1:length(df_obs[[1]])){
+  
+  #se itera sobre todas las observaciones del df_obs
+  for (i in 1:length(df_obs[[1]])){ #CAMBIO: MAS ENTENDIBLE PONER NROW
+    
+    #se guarda la edad en x
     x <- df_obs$Edad[i]
+    
+    #si no es la primera observación
     if(i != 1) {
+      
+      #si la observación pasada tiene la misma edad y sexo, copia las probabilidades y pasa a la siguiente observación
       if((df_obs$Edad[i-1] == x) & (df_obs$Sexo[i] == df_obs$Sexo[i-1])){
-        
-        all_qx[c] <- all_qx[c-1]
-        c <- c+1
-        next
+        all_qx[c] <- all_qx[c-1] #copia la lista
+        c <- c+1 #Actualizamos el contador de personas
+        next #Pasamos a la siguiente iteración
       }
     } 
+    
+    #se actualiza el año a 2024
     y <- 2024 # modificación puesto estaba en 2023
+    
+    #Se filtra la base con las probabilidades según el sexo de la observación
     df <- df_prob[df_prob$sex == df_obs$Sexo[i],]
+    
+    #Inicializamos la sublista de probabilidades.
     local_qx <- list()
-    n <- 1
+   
+    #Se hace un while para copiar todas las probabilidades de vida de la observación  en cuestión a partir de la edad y el año actual
+     n <- 1 #Contador del while
     while (any(df$edad == x & df$year == y)) {
-      # Filtrar datos por edad y año actual 
+      # Filtrar datos por edad y año actual para encontrar probabilidad de muerte de la persona a esa edad
       qx <- df[df$edad == x & df$year == y , ]$qx
+      
+      # Se calcula la probabilidad de sobrevivencia
       local_qx[n] <- 1 - qx
       n <- n + 1
+      
+      #Se actualiza la edad y el año
       x <- x + 1
       y <- y + 1
     }
     all_qx[[c]] <- list()
-    all_qx[[c]][[1]] <- local_qx
+    #Se guarda en una lista las probabilidades, el sexo y la edad
+    all_qx[[c]][[1]] <- local_qx 
     all_qx[[c]][[2]] <- df_obs$Sexo[i] 
     all_qx[[c]][[3]] <- df_obs$Edad[i] 
-    c <- c+1
+    
+    c <- c+1 #Actualizamos contador de personas
   }
+  
+  #Se devuelve la lista con una lista para cada observación
   return(all_qx)
 }
 ```
 
 ## Recolectar la probabilidad de muerte/sobrevivencia de cada observación
 ```{r}
-t <- proc.time()
-qx <- get_qx(ABC, SUPEN_num)
+t <- proc.time() #Tiempo de ejecución
+qx <- get_qx(ABC, SUPEN_num) #Probabilidades de muerte para personas de ABC
 proc.time() - t
 ```
 
 # Proyecciones demográficas
 ## Función madre: observar las posibilidades de vivir
 ```{r}
-proy_per_viva <- data.frame(edad = 0:100, poblacionM = numeric(101), poblacionH = numeric(101))
+#Inicializar dataframe, con proyección de vida residual.
+proy_per_viva <- data.frame(Año = c(2024:2124), poblacionM = numeric(101),
+                            poblacionH = numeric(101)) 
 proy_per_viva$poblacionH[1] = 272
 proy_per_viva$poblacionM[1] = 228
 
+#' Calcula la proyección demográfica de toda la población evaluada
+#' @param qx Lista de listas con las probabilidades de sobrevivencia de cada individuo para cada año
+#' @param df df para 3 columnas: edad, poblacionM, poblacionH, con población inicial M de 272 y población inicial H de 228
+#' @return df: con la cantidad de personas vivas que se esperan para el año 2024 más i 
 proy_viva <- function(qx, df){
-  acumH <- numeric(272) + 1
-  acumM <- numeric(228) + 1
+  acumH <- numeric(272) + 1 #inicializa vector de tamaño 272 con 1s
+  acumM <- numeric(228) + 1 #inicializa vector de tamaño 228 con 1s
+  
+  #Iterar sobre los años
   for (i in 1:100){
     m <- 0
     h <- 0
+    
+    #Iterar sobre las personas 
     for (c in 1:500){
+      
+      #Si es hombre 
       if(qx[[c]][[2]] == 1){
-        h <- h + 1
+        h <- h + 1 #sumamos un hombre
+        
+        #Si la persona ya no tiene probabilidades de sobrevivencia, entonces pasamos a la siguiente persona
         if(i > length(qx[[c]][[1]])){
           next
-        }        
+        } 
+        
+      #guarda el ipx para el hombre h
         acumH[h] <- acumH[h]*qx[[c]][[1]][[i]]
-      } else {
-        m <- m +1
+      } 
+      
+      else { #Es mujer
+        m <- m +1 #Añadimos una mujer
         if(i > length(qx[[c]][[1]])){
           next
-        }         
+        }
+        #guarda el ipx para la mujer m
         acumM[m] <- acumM[m]*qx[[c]][[1]][[i]]
       }
     }
+    #Se lo que se espera que cada persona viva individualmente, para obtener      la cantidad esperada de personas que vivan hasta el año i 
     df$poblacionH[i+1] <- sum(acumH)
     df$poblacionM[i+1] <- sum(acumM)
+    
   }
   return(df)
 }
 
+#Se utiliza la función que calcula la proyección de personas para cada año
 proy_per_viva <- proy_viva(qx, proy_per_viva)
+#Se redondean las proyecciones a 8 decimales
 proy_per_viva$poblacionM <- round(proy_per_viva$poblacionM, 8)
 proy_per_viva$poblacionH <- round(proy_per_viva$poblacionH, 8)
 ```
 
 ## Caso contrario
 ```{r}
+#Se calcula la cantidad de personas muertas de la siguiente manera, ya que es el complemento de las personas vivas 
 proy_per_muerta <- proy_per_viva
 proy_per_muerta$poblacionM <- 228 - proy_per_muerta$poblacionM
 proy_per_muerta$poblacionH <- 272 - proy_per_muerta$poblacionH
@@ -128,118 +225,201 @@ proy_per_muerta$poblacionH <- 272 - proy_per_muerta$poblacionH
 
 ## Seccionar a solo empleados vivos
 ```{r}
-proy_emp_viva <- data.frame(edad = 0:100, poblacionM = numeric(101), poblacionH = numeric(101))
+proy_emp_viva <- data.frame(Año = c(2024:2124), poblacionM = numeric(101), poblacionH = numeric(101))
 proy_emp_viva$poblacionH[1] = 272
 proy_emp_viva$poblacionM[1] = 228
 
+#' 
+#' @param qx Lista de listas con las probabilidades de sobrevivencia de cada individuo para cada año
+#' @param df df para 3 columnas: edad, poblacionM, poblacionH, con población inicial M de 272 y población inicial H de 228
+#' @return df: Proyección demográfica de empleados activos
 proy_emp_vivos <- function(qx, df){
-  acumH <- numeric(272) + 1
-  acumM <- numeric(228) + 1
+  
+  acumH <- numeric(272) + 1 #inicializa vector de tamaño 272 con 1s
+  acumM <- numeric(228) + 1 #incializa vector de tamaño 228 con 1s
+  
+  #iteramos sobre los años
   for (i in 1:100){
-    m <- 0
-    h <- 0
+    m <- 0 #contador de mujeres
+    h <- 0 #contador de hombres
+    
+    #Iterar sobre las personas
     for (c in 1:500){
+      
+     #Si es hombre
       if(qx[[c]][[2]] == 1){
         h <- h + 1
+        
+         #Si la persona ya no tiene probabilidades de sobrevivencia, entonces pasamos a la siguiente persona
         if(i > length(qx[[c]][[1]])){
           next
         }
+        
+        #Si la persona tiene más de 65 (edad +año) pasamos a la siguiente
         if(65 < qx[[c]][[3]] + i){
           acumH[h] <- 0
           next
-        }        
+        } 
+        
+        #guarda el ipx para el hombre h
         acumH[h] <- acumH[h]*qx[[c]][[1]][[i]]
-      } else {
+      } 
+      
+      #Si es mujer
+      else {
         m <- m +1
+        
+        #Si la persona ya no tiene probabilidades de sobrevivencia, entonces pasamos a la siguiente persona
         if(i > length(qx[[c]][[1]])){
           next
-        }     
+        
+        }   
+        
+        #Si la persona tiene más de 65 (edad +año) pasamos a la siguiente
         if(65 < qx[[c]][[3]] + i){
           acumM[m] <- 0
           next
         } 
+        
+         #guarda el ipx para la mujer m
         acumM[m] <- acumM[m]*qx[[c]][[1]][[i]]
       }
     }
+     # Se obtiene la cantidad esperada de personas que vivan hasta el año i         sumando lo que se espera que cada persona viva individualmente
     df$poblacionH[i+1] <- sum(acumH)
     df$poblacionM[i+1] <- sum(acumM)
   }
   return(df)
 }
 
+#Se utiliza la función que calcula la proyección de personas para cada año
 proy_emp_viva <- proy_emp_vivos(qx, proy_emp_viva)
+#Se redondean las proyecciones a 8 decimales
 proy_emp_viva$poblacionM <- round(proy_emp_viva$poblacionM, 8)
 proy_emp_viva$poblacionH <- round(proy_emp_viva$poblacionH, 8)
 ```
 
-## Seccionar a solo pensionados muertos
+## Seccionar a solo pensionados vivos
 ```{r}
-proy_pen_viva <- data.frame(edad = 0:100, poblacionM = numeric(101), poblacionH = numeric(101))
+#Se crea el data frame para las proyecciones de las personas pensionadas
+proy_pen_viva <- data.frame(Año = c(2024:2124), poblacionM = numeric(101), poblacionH = numeric(101))
+
+#'Calcula para proyección demográfica de los pensionados
+#' @param qx Lista de listas con las probabilidades de sobrevivencia de cada individuo para cada año
+#' @param df df para 3 columnas: edad, poblacionM, poblacionH, con población inicial M de 272 y población inicial H de 228
+#' @return df: Proyección demográfica de empleados pensionados
 proy_pen_vivos <- function(qx, df){
   acumH <- numeric(272) + 1
   acumM <- numeric(228) + 1
+  
+  #Se itera sobre los años
   for (i in 1:100){
+    
     m <- 0
     h <- 0
+    
+    #Se genera un vector para llevar cuenta de las personas pensionadas
     penH <- numeric(272)
     penM <- numeric(228)
+    
+    #Se itera sobre todas las personas
     for (c in 1:500){
+      
+      #Si es hombre
       if(qx[[c]][[2]] == 1){
         h <- h + 1
+        
+        #Si la persona ya no tiene probabilidades de vivir
         if(i > length(qx[[c]][[1]])){
           next
         }
+        
+        #Si la persona tiene más de 65 años entonces se pone un uno en el            vector para llevar la cuenta de los pensionados
         if(65 < qx[[c]][[3]] + i){
           penH[h] <- 1
-        }        
+        }
+        
+        #Se van guardando las probabilidades de vida en penH solo para los            pensionados
         acumH[h] <- acumH[h]*qx[[c]][[1]][[i]]
         penH[h] <- penH[h] * acumH[h]
-      } else {
+      } 
+      #Si es mujer
+      else { 
         m <- m +1
+        
+        #Si la persona ya no tiene probabilidades de vivir
         if(i > length(qx[[c]][[1]])){
           next
-        }     
+        }    
+        
+        #Si la persona tiene más de 65 años entonces se pone un uno en el            vector para llevar la cuenta de los pensionados
         if(65 < qx[[c]][[3]] + i){
           penM[m] <- 1
         } 
+        
+        #Se van guardando las probabilidades de vida en penM solo para los          pensionados
         acumM[m] <- acumM[m]*qx[[c]][[1]][[i]]
         penM[m] <- penM[m]*acumM[m]
       }
     }
+    
+    # Se obtiene la cantidad esperada de personas que vivan hasta el año i      sumando lo que se espera que cada persona viva individualmente
     df$poblacionH[i+1] <- sum(penH)
     df$poblacionM[i+1] <- sum(penM)
   }
   return(df)
 }
+
+#Se utiliza la función que calcula la proyección de personas para cada año
 proy_pen_viva <- proy_pen_vivos(qx, proy_pen_viva)
+#Se redondean las probabilidades a 8 decimales
 proy_pen_viva$poblacionM <- round(proy_pen_viva$poblacionM, 8)
 proy_pen_viva$poblacionH <- round(proy_pen_viva$poblacionH, 8)
 ```
 
 ## Seccionar a solo empleados muertos
 ```{r}
-proy_emp_muerta <- data.frame(edad = 0:100, poblacionM = numeric(101), poblacionH = numeric(101))
+
+#Crea un data frame para guardar la proyección demográfica de las muertes de los empleados 
+proy_emp_muerta <- data.frame(Año = c(2024:2124), poblacionM = numeric(101), poblacionH = numeric(101))
+
+#'Calcula para proyección demográfica de las muertes de empleados activos
+#' @param qx Lista de listas con las probabilidades de sobrevivencia de cada individuo para cada año
+#' @param df df para 3 columnas: edad, poblacionM, poblacionH, con población inicial M de 272 y población inicial H de 228
+#' @return df: Proyección demográfica de las muertes de los empleados activos
 proy_emp_dead <- function(qx, df){
   acumH <- numeric(272) + 1
   acumM <- numeric(228) + 1
+  
+  #Se itera sobre los años
   for (i in 1:100){
     m <- 0
     h <- 0
+    
+    #Se crean vectores con 0s para guardar las probabilidades de muerte  personas activas
     localH <- numeric(272)
     localM <- numeric(228)
+    
+    #Se itera sobre cada persona
     for (c in 1:500){
       if(qx[[c]][[2]] == 1){
         h <- h + 1
         if(i > length(qx[[c]][[1]])){
           next
         }
+        #Si la persona ya es mayor a 65, se cuenta como pensionada y no se            guardan sus proabilidades de muerte
         if(65 < qx[[c]][[3]] + i){
           acumH[h] <- 0
           next
-        }        
+        }
+        
+        #Se guardan las probabilidades de muerte para las personas activas
         localH[h] <- acumH[h]*(1 - qx[[c]][[1]][[i]])
+        
+        #Se actualizan las probabilidades de sobrevivencia 
         acumH[h] <- acumH[h]*qx[[c]][[1]][[i]]
-      } else {
+        
+      } else { #Si es mujer
         m <- m +1
         if(i > length(qx[[c]][[1]])){
           next
@@ -247,17 +427,20 @@ proy_emp_dead <- function(qx, df){
         if(65 < qx[[c]][[3]] + i){
           acumM[m] <- 0
           next
-        } 
+        }
         localM[m] <- acumM[m]*(1 - qx[[c]][[1]][[i]])
         acumM[m] <- acumM[m]*qx[[c]][[1]][[i]]
+        
       }
     }
+    #Se calcula la esperanza de muertes en el año i y se le suma las muertes del año anterior. 
     df$poblacionH[i+1] <- sum(localH) + df$poblacionH[i]
     df$poblacionM[i+1] <- sum(localM) + df$poblacionM[i]
   }
   return(df)
 }
 
+#Aplicamos la función
 proy_emp_muerta <- proy_emp_dead(qx, proy_emp_muerta)
 proy_emp_muerta$poblacionM <- round(proy_emp_muerta$poblacionM, 8)
 proy_emp_muerta$poblacionH <- round(proy_emp_muerta$poblacionH, 8)
@@ -265,38 +448,62 @@ proy_emp_muerta$poblacionH <- round(proy_emp_muerta$poblacionH, 8)
 
 ## Seccionar a solo pensionados muertos
 ```{r}
-proy_pen_muerta <- data.frame(edad = 0:100, poblacionM = numeric(101), poblacionH = numeric(101))
+#Crea un data frame para guardar la proyección demográfica de las muertes de los pensionados 
+
+ 
+proy_pen_muerta <- data.frame(Año = c(2024:2124), poblacionM = numeric(101), poblacionH = numeric(101))
+
+#'Calcula para proyección demográfica de las muertes de pensionados
+#' @param qx Lista de listas con las probabilidades de sobrevivencia de cada individuo para cada año
+#' @param df df para 3 columnas: edad, poblacionM, poblacionH, con población inicial M de 272 y población inicial H de 228
+#' @return df: Proyección demográfica de las muertes de los pensionados
 proy_pen_dead <- function(qx, df){
+  
   acumH <- numeric(272) + 1
   acumM <- numeric(228) + 1
+  
+  #Se itera sobre los años
   for (i in 1:100){
     m <- 0
     h <- 0
+    
+    #inicializamos vectores en 0s para guardar probabilidades de muerte para los pensionados
     penH <- numeric(272)
     penM <- numeric(228)
+    
     for (c in 1:500){
       if(qx[[c]][[2]] == 1){
         h <- h + 1
+        
         if(i > length(qx[[c]][[1]])){
           next
         }
+        
+         
+        #Si la persona tiene más de 65 años entonces se pone un uno en el            vector para llevar la cuenta de los pensionados
         if(65 < qx[[c]][[3]] + i){
-          penH[h] <- 1
-        }        
+          penH[h] <- 1 
+        }
+        
+        #Se van guardando las probabilidades de muerte en penH solo para los  pensionados
         penH[h] <- penH[h] * acumH[h] *(1 - qx[[c]][[1]][[i]])
         acumH[h] <- acumH[h]*qx[[c]][[1]][[i]]
-      } else {
+      } else { #si es mujer 
         m <- m +1
+        
         if(i > length(qx[[c]][[1]])){
           next
         }     
         if(65 < qx[[c]][[3]] + i){
           penM[m] <- 1
         } 
+        #Se van guardando las probabilidades de vida en penM solo para los          pensionados
         penM[m] <- penM[m]*acumM[m]*(1-qx[[c]][[1]][[i]])
         acumM[m] <- acumM[m]*qx[[c]][[1]][[i]]
       }
     }
+    
+    #Se calcula la esperanza de muertes en el año i y se le suma las muertes     del año anterior. 
     df$poblacionH[i+1] <- sum(penH) + df$poblacionH[i]
     df$poblacionM[i+1] <- sum(penM) + df$poblacionM[i]
   }
@@ -310,8 +517,9 @@ proy_pen_muerta$poblacionH <- round(proy_pen_muerta$poblacionH, 8)
 # Resumir los resultados demográficos
 ## En la proyección de mujeres
 ```{r}
+#Un df con todas las proyecciones de las mujeres
 proy_mujeres <- data.frame(
-  edad = 0:100,
+  año = 2024:2124,
   proy_vivas = proy_per_viva$poblacionM,
   proy_muertas = proy_per_muerta$poblacionM,
   proy_emp_vivas = proy_emp_viva$poblacionM,
@@ -325,19 +533,19 @@ proy_mujeres <- data.frame(
 ```{r, echo=FALSE, warning=FALSE}
 ggplot() +
   geom_line(data = proy_mujeres,
-            aes(x = edad, y = proy_emp_vivas, color = "emp_vivas"),
+            aes(x = año, y = proy_emp_vivas, color = "emp_vivas"),
             size = 1) +
   geom_line(data = proy_mujeres,
-            aes(x = edad, y = proy_pen_vivas, color = "pen_vivas"),
+            aes(x = año, y = proy_pen_vivas, color = "pen_vivas"),
             size = 1) +
   geom_line(
     data = proy_mujeres,
-    aes(x = edad, y = proy_emp_muertas, color = "emp_muertas"),
+    aes(x = año, y = proy_emp_muertas, color = "emp_muertas"),
     size = 1
   ) +
   geom_line(
     data = proy_mujeres,
-    aes(x = edad, y = proy_pen_muertas, color = "pen_muertas"),
+    aes(x = año, y = proy_pen_muertas, color = "pen_muertas"),
     size = 1
   ) +
   scale_color_manual(
@@ -360,8 +568,9 @@ ggplot() +
 
 ## En la proyección de hombres
 ```{r}
+#Un df con todas las proyecciones de los hombres
 proy_hombres <- data.frame(
-  edad = 0:100,
+  año = 2024:2124,
   proy_vivos = proy_per_viva$poblacionH,
   proy_muertos = proy_per_muerta$poblacionH,
   proy_emp_vivos = proy_emp_viva$poblacionH,
@@ -375,19 +584,19 @@ proy_hombres <- data.frame(
 ```{r, echo=FALSE, warning=FALSE}
 ggplot() +
   geom_line(data = proy_hombres,
-            aes(x = edad, y = proy_emp_vivos, color = "emp_vivos"),
+            aes(x = año, y = proy_emp_vivos, color = "emp_vivos"),
             size = 1) +
   geom_line(data = proy_hombres,
-            aes(x = edad, y = proy_pen_vivos, color = "pen_vivos"),
+            aes(x = año, y = proy_pen_vivos, color = "pen_vivos"),
             size = 1) +
   geom_line(
     data = proy_hombres,
-    aes(x = edad, y = proy_emp_muertos, color = "emp_muertos"),
+    aes(x = año, y = proy_emp_muertos, color = "emp_muertos"),
     size = 1
   ) +
   geom_line(
     data = proy_hombres,
-    aes(x = edad, y = proy_pen_muertos, color = "pen_muertos"),
+    aes(x = año, y = proy_pen_muertos, color = "pen_muertos"),
     size = 1
   ) +
   scale_color_manual(
@@ -477,11 +686,18 @@ rm(proy_emp_vivos)
 # Proyección financiera
 ## Proyección del VP de los pagos de beneficio de muerte de empleados activos
 ```{r}
+#' Calcula el valor presente de las obligaciones de cada año por muerte de los empleados activos. 
+#' @param df Recibe el df de proy_hombres o proy_mujeres
+#' @return Devuelve un vector con el valor presente para cada año
 proy_emp_vp <- function(df){
-  col <- df[[6]]
+  #La columna 6 es la de la proyección demógrafica de las muertes de los      empleados activos
+  col <- df[[6]] 
+  
+  #Fórmula=cantidad de muerte*suma asegurada*v^cantidad de años desde 2024
   for (i in 1:100){
     col[102-i] <- (col[102-i] - col[101-i])*5000000*(1.03/1.07)^(100-i)
     # se hace el supuesto que empieza a inflarse el monto después del primer pago
+    #CAMBIO: 100-i=1
   }
   return(col)
 }
@@ -497,9 +713,14 @@ proy_M_fin$proy_emp_vp <- round(proy_emp_vp(proy_mujeres),2)
 
 ## Proyección financiera de los pagos de beneficio de muerte de empleados activos
 ```{r}
+#' Calcula el valor financiero de las obligaciones de cada año por muerte de los empleados activos. Este no se descuenta al 2024, sino que sería el valor financiero de ese mismo año. 
+#' @param df Recibe el df de proy_hombres o proy_mujeres
+#' @return Devuelve un vector con el valor de las obligaciones de ese año
 proy_emp_fin <- function(df){
+  #La columna 6 es la de la proyección demógrafica de las muertes de los      empleados activos
   col <- df[[6]]
   for (i in 1:100){
+    #Fórmula=cantidad de muerte*suma asegurada
     col[102-i] <- (col[102-i] - col[101-i])*5000000*(1.03)^(100-i)
     # se hace el supuesto que empieza a inflarse el monto después del primer pago
   }
@@ -515,11 +736,15 @@ proy_M_fin$proy_emp_fin <- round(proy_emp_fin(proy_mujeres),2)
 
 ## Proyección del VP de los pagos de beneficio de muerte de pensionado
 ```{r}
+#' Calcula el valor presente de las obligaciones de cada año por muerte de los pensionados. 
+#' @param df Recibe el df de proy_hombres o proy_mujeres
+#' @return Devuelve un vector con el valor presente para cada año
 proy_pen_vp <- function(df){
-  col <- df[[7]]
+  col <- df[[7]] #la columna 7 es la proyección de pensionados muertos
   for (i in 1:100){
+    #Fórmula=cantidad de muerte*suma asegurada*v^cantidad de años desde 2024
     col[102-i] <- (col[102-i] - col[101-i])*1000000*(1.03/1.07)^(100-i)
-    # se hace el supuesto que empieza a inflarse el monto después del primer pago
+    #se hace el supuesto que empieza a inflarse el monto después del primer pago
   }
   return(col)
 }
@@ -533,9 +758,13 @@ proy_M_fin$proy_pen_vp <- round(proy_pen_vp(proy_mujeres),2)
 
 ## Proyección financiera de los pagos de beneficio de muerte de pensionado
 ```{r}
+#' Calcula el valor financiero de ese año de las obligaciones de cada año por muerte de los pensionados. 
+#' @param df Recibe el df de proy_hombres o proy_mujeres
+#' @return Devuelve un vector con el valor presente para cada año
 proy_pen_fin <- function(df){
   col <- df[[7]]
   for (i in 1:100){
+    #Fórmula=cantidad de muerte*suma asegurada
     col[102-i] <- (col[102-i] - col[101-i])*1000000*(1.03)^(100-i)
     # se hace el supuesto que empieza a inflarse el monto después del primer pago
   }
@@ -551,16 +780,31 @@ proy_M_fin$proy_pen_fin <- round(proy_pen_fin(proy_mujeres),2)
 
 ## Proyección del VP de los pagos de beneficio de anualidades
 ```{r}
+#' Calcula el valor presente de ese año de las obligaciones por las anualidades de los pensionados
+#' @param df Recibe el df de proy_hombres o proy_mujeres
+#' @return Devuelve un vector con el valor presente para cada año 
 proy_ann_vp <- function(df){
+  #La columna 5 es la proyección demográfica de pensionados vivos
   col <- df[[5]]
+  
+  #Se calcula la tasa mensual efectiva
   interes <- 1.07^(1/12) - 1
-  # se hace el supuesto que paga la primera pensión al final de mes 
+  
+  # se hace el supuesto que paga la primera pensión al final de mes
+  
+  #fórmula: Monto*a:12 (con tasa mensual)
   VP_ann <- 300000*(1-(1/1.07))/interes
+  
+  #fórmula: Monto/tasa anual
   VP_agui <- 300000*(1/1.07) # modificación - aguinaldo a final de año
   VP <- VP_ann + VP_agui
+  
+  #iteramos sobre los años para asignar el valor presente de cada año
   for (i in 1:100){
+    
     col[i+1] <- col[i+1]*VP*(1.03/1.07)^(i-1)
   }
+  # se hace el supuesto que empieza a inflarse el monto después del primer pago, además de trae a valor presente a partir del segundo año (el primer año ya se trae a valor presente mediante el uso de la anualidad a:12)
   return(col)
 }
 ```
@@ -573,11 +817,16 @@ proy_M_fin$proy_ann_vp <- round(proy_ann_vp(proy_mujeres),2)
 
 ## Proyección de los pagos de beneficio de anualidades
 ```{r}
+#' Calcula el valor financiero de ese año de las obligaciones por las anualidades de los pensionados
+#' @param df Recibe el df de proy_hombres o proy_mujeres
+#' @return Devuelve un vector con el valor financiero para cada año 
 proy_ann_fin <- function(df){
   col <- df[[5]]
   for (i in 1:100){
+    #13*300 000= 3 900 000
     col[i+1] <- col[i+1]*3900000*(1.03)^(i-1)
   }
+  # se hace el supuesto que empieza a inflarse el monto después del primer pago
   return(col)
 }
 ```
@@ -591,6 +840,7 @@ proy_M_fin$proy_ann_fin <- round(proy_ann_fin(proy_mujeres),0)
 # Resumir los resultados financieros
 ## Sumar los resultados
 ```{r}
+#sumamos todas las obligaciones y lo guardamos en proy_hombres y proy_mujeres
 proy_hombres$valor_fin <- proy_H_fin$proy_emp_fin + proy_H_fin$proy_pen_fin + proy_H_fin$proy_ann_fin
 proy_hombres$valor_p <- proy_H_fin$proy_emp_vp + proy_H_fin$proy_pen_vp + proy_H_fin$proy_ann_vp
 proy_mujeres$valor_fin <- proy_M_fin$proy_emp_fin + proy_M_fin$proy_pen_fin + proy_M_fin$proy_ann_fin
@@ -641,6 +891,9 @@ rm(proy_M_fin)
 ## Función de la prima
 Va a servir para la nivelada
 ```{r}
+#' Calcula el valor financiero de ese año de las obligaciones por las anualidades de los pensionados
+#' @param df Recibe el df de proy_hombres o proy_mujeres
+#' @return Devuelve un vector con el valor financiero para cada año 
 primas <- function(qx){
   c <- 1
   df = data.frame(edad = numeric(500), sexo = numeric(500), prima = numeric(500))
