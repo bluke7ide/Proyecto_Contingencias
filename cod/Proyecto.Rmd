@@ -35,7 +35,6 @@ SUPEN_num <- as.data.frame(lapply(SUPEN, as.numeric), stringsAsFactors = FALSE)
 ABC$Edad = 2023 - as.double(format(ABC$`Fecha de nacimiento`, format="%Y")) 
 ABC[ABC$Sexo == 'M',]$Sexo <- 'Hombres' #hombres: 1
 ABC[ABC$Sexo == 'F',]$Sexo <- 'Mujeres'#Mujeres: 2
-
 ```
 
 ## Transformaciones y visualizaciones iniciales
@@ -51,7 +50,6 @@ ABC$rango_edad<-cut(ABC$Edad, breaks=breaks, labels=labels, right=FALSE)
 tabla_rangos_sexo <- table(ABC$rango_edad, ABC$Sexo)
 tabla_porcentaje_sexo <- prop.table(tabla_rangos_sexo, margin=1) * 100
 
-
 tabla_rangos_sexo <- data.frame(
   rango_edad = rep(rownames(tabla_rangos_sexo), times=ncol(tabla_rangos_sexo)),
   sexo = rep(colnames(tabla_rangos_sexo), each=nrow(tabla_rangos_sexo)),
@@ -65,7 +63,7 @@ geom_bar(stat="identity", fill="darkseagreen3")+
 labs(title="Distribución de rangos de edad", x="Edad", y="Frecuencia")+
 theme_minimal()
 
-ggplot(data=tabla_rangos_porcentaje_sexo, aes(x=rango_edad, y=frecuencia, fill=sexo)) +
+ggplot(data=tabla_rangos_sexo, aes(x=rango_edad, y=frecuencia, fill=sexo)) +
   geom_bar(stat="identity", position="dodge") +
   labs(title="Distribución de rangos de edad por sexo", x="Edad", y="Frecuencia") +
   scale_fill_manual(name="Sexo", values=c("Hombres"="steelblue3", "Mujeres"="hotpink3"), labels=c("Hombres", "Mujeres"))+
@@ -74,8 +72,8 @@ ggplot(data=tabla_rangos_porcentaje_sexo, aes(x=rango_edad, y=frecuencia, fill=s
 
 ## Transformaciones menores finales
 ```{r}
-ABC[ABC$Sexo == 'Hombres',]$Sexo <- 1 #hombres: 1
-ABC[ABC$Sexo == 'Mujeres',]$Sexo <- 2#Mujeres: 2
+ABC[ABC$Sexo == 'Hombres',]$Sexo <- "1" 
+ABC[ABC$Sexo == 'Mujeres',]$Sexo <- "2"
 ABC$Sexo <- as.double(ABC$Sexo) 
 ```
 
@@ -621,19 +619,19 @@ ggplot() +
 ```{r, echo=FALSE, warning=FALSE}
 ggplot() +
   geom_line(data = proy_hombres,
-            aes(x = edad, y = proy_vivos, color = "vivos"),
+            aes(x = año, y = proy_vivos, color = "vivos"),
             size = 1) +
   geom_line(data = proy_hombres,
-            aes(x = edad, y = proy_muertos, color = "muertos"),
+            aes(x = año, y = proy_muertos, color = "muertos"),
             size = 1) +
   geom_line(
     data = proy_mujeres,
-    aes(x = edad, y = proy_vivas, color = "vivas"),
+    aes(x = año, y = proy_vivas, color = "vivas"),
     size = 1
   ) +
   geom_line(
     data = proy_mujeres,
-    aes(x = edad, y = proy_muertas, color = "muertas"),
+    aes(x = año, y = proy_muertas, color = "muertas"),
     size = 1
   ) +
   scale_color_manual(
@@ -695,9 +693,10 @@ proy_emp_vp <- function(df){
   
   #Fórmula=cantidad de muerte*suma asegurada*v^cantidad de años desde 2024
   for (i in 1:100){
-    col[102-i] <- (col[102-i] - col[101-i])*5000000*(1.03/1.07)^(100-i)
+    col[102-i] <- (col[102-i]-
+                     col[101-i])*5000000*((1.03^(100-i))/(1.07)^(99-i))
     # se hace el supuesto que empieza a inflarse el monto después del primer pago
-    #CAMBIO: 100-i=1
+    #Modificación: 100-i pasó a ser 100-i+1 para contemplar de que se paga al final del año.
   }
   return(col)
 }
@@ -743,8 +742,10 @@ proy_pen_vp <- function(df){
   col <- df[[7]] #la columna 7 es la proyección de pensionados muertos
   for (i in 1:100){
     #Fórmula=cantidad de muerte*suma asegurada*v^cantidad de años desde 2024
-    col[102-i] <- (col[102-i] - col[101-i])*1000000*(1.03/1.07)^(100-i)
+    col[102-i] <- (col[102-i]
+                   -col[101-i])*1000000*((1.03^(100-i))/(1.07)^(99-i))
     #se hace el supuesto que empieza a inflarse el monto después del primer pago
+    #Modificación: 100-i pasó a ser 100-i+1 para contemplar de que se paga al final del año.
   }
   return(col)
 }
