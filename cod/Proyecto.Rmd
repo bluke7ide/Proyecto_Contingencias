@@ -852,10 +852,10 @@ proy_mujeres$valor_p <- proy_M_fin$proy_emp_vp + proy_M_fin$proy_pen_vp + proy_M
 ```{r}
 ggplot() +
   geom_line(data = proy_hombres,
-            aes(x = edad, y = valor_fin/1000000, color = "hombres"),
+            aes(x = año, y = valor_fin/1000000, color = "hombres"),
             size = 1) +
   geom_line(data = proy_mujeres,
-            aes(x = edad, y = valor_fin/1000000, color = "mujeres"),
+            aes(x = año, y = valor_fin/1000000, color = "mujeres"),
             size = 1) +
   scale_color_manual(
     values = c(
@@ -1071,40 +1071,58 @@ La prima nivelada entonces da 1.2 millones de colones anuales aproximadamente, o
 # Prueba de métodos diferentes
 ## Modificación de la función primas
 ```{r}
+#' Calcula el valor financiero del año de las obligaciones por anualidades de los pensionados
+#'
+#' @param qx Recibe el dataframe que contiene la probabilidad de supervivencia, edad y sexo para cada individuo
+#' @param m_p Monto de la pensión mensual
+#' @param m_me Monto en caso de muerte antes de los 65 años
+#' @param m_mp Monto en caso de muerte después de los 65 años
+#' @return Devuelve un dataframe con la edad, sexo, valor presente, anualidad y prima para cada individuo
 primas_esp <- function(qx, m_p, m_me, m_mp){
+  # Inicializa el contador y el dataframe de resultados
   c <- 1
   df = data.frame(edad = numeric(500), sexo = numeric(500), prima = numeric(500))
+  # Itera sobre cada elemento en la lista qx
   for (i in 1:500){
     x <- qx[[i]]
+    # Verifica si el elemento actual es igual al anterior
     if(i != 1) {
       ant <-qx[[i-1]]
       if((x[[2]] == ant[[2]]) & (x[[3]] == ant[[3]])){
+        # Si es igual, copia los valores del anterior y pasa al siguiente
         df[c,] <-df[c-1,]
         c <- c+1
         next
       }
     } 
+    # Inicializa el valor presente de las pensiones y la probabilidad acumulada
     vp_pen <- 0
     px_acum <- 1
+    # Itera sobre cada año para calcular el valor presente de las pensiones
     for (j in 1:length(x[[1]])) {
       vp_pen <- vp_pen 
+      # Cálculo del valor presente de las pensiones en caso de muerte antes y después de los 65
       if (j + x[[3]] <= 65){
         vp_pen <- vp_pen + px_acum *(1 - x[[1]][[j]])*m_me*(1.03/1.07)^(j-1)
       } else {
         interes <- 1.07^(1/12) - 1
+        # Valor presente de las anualidades y aguinaldo
         VP_ann <- m_p*(1-(1/1.07))/interes
         VP_agui <- m_p*(1/1.07)
         VP <- VP_ann + VP_agui
         vp_pen <- vp_pen + px_acum *(1 - x[[1]][[j]])*m_mp*(1.03/1.07)^(j-1)
         vp_pen <- vp_pen + px_acum *(x[[1]][[j]])*VP*(1.03/1.07)^(j-1)
       }
+      # Actualiza la probabilidad acumulada
       px_acum <- px_acum *(x[[1]][[j]])
       
       
     }
+    # Cálculo de las anualidades
     annuity <- (1-(1.03/1.07)^(65 - x[[3]]))/(((1.07/1.03)-1)*(1.03/1.07))
 
-df$edad[c] <- x[[3]]
+    # Almacena los resultados en el dataframe
+    df$edad[c] <- x[[3]]
     df$sexo[c] <- x[[2]]
     df$vp[c] <- vp_pen
     df$anualidad[c] <- annuity
@@ -1192,22 +1210,36 @@ VP <- (300000*(1-(1/1.07)))/(1.07^(1/12) - 1) + 300000*(1/1.07) # modificación 
 
 ## Creando la función de simulación
 ```{r}
+#' Realiza una simulación del valor presente de las pensiones de forma estocástica
+#'
+#' @param df Recibe un dataframe que contiene la probabilidad de supervivencia, edad y sexo para cada individuo
+#' @return Devuelve un dataframe con las primas calculadas para cada individuo
 simulacion <- function(df){
+  # Inicializa los vectores para contar los vivos, las pensiones y la suma del valor   presente
   vivos <- numeric(length(df)) + 1
   pen <- numeric(length(df))
   suma_vp <- numeric(length(df))
+  # Itera sobre cada uno de los períodos
   for (i in 1:96){
+    # Calcula el factor de descuento para el período actual
     dif <- (1.03/1.07)^(i-1)
+    # Itera sobre cada individuo en el dataframe
     for (c in 1:length(df)){
+      # Si el individuo ya está muerto o no hay más datos de probabilidad, pasa al        siguiente
       if(vivos[c] == 0 | i > length(df[[c]][[1]])){
         next
       }
+      
+      # Si la edad del individuo más el período actual es mayor a 65, se le otorga         pensión
       if(df[[c]][[3]] + i > 65){
         pen[c] <- 1
       }
+      
+      # Si el individuo está vivo, realiza una simulación de muerte
       if(vivos[c] == 1){
         if(runif(1) > df[[c]][[1]][[i]]){
           vivos[c] <- 0
+          # Calcula el valor presente en caso de muerte, dependiendo de si tenía               pensión o no
           if(pen[c] == 1){
             suma_vp[c] <- suma_vp[c] + 1000000*dif
           } else {
@@ -1215,10 +1247,12 @@ simulacion <- function(df){
           }
         }
       }
+      # Suma el valor presente de las pensiones en caso de que el individuo siga vivo
       suma_vp[c] <- suma_vp[c] + pen[c]*vivos[c]*VP*dif
     }
   }
 
+  # Calcula las primas dividiendo la suma del valor presente por las anualidades
   df <- data.frame(prima = suma_vp/anualidades)
 
   return(df[[1]])
