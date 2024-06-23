@@ -940,24 +940,18 @@ proy_pen_fin <- function(df){
 
 ### Observaciones
 ```{r}
-proy_H_fin$proy_pen_fin <- round(proy_pen_fin(proy_hombres),2)
-proy_M_fin$proy_pen_fin <- round(proy_pen_fin(proy_mujeres),2)
-```
-
-## Proyección del VP de los pagos de beneficio de anualidades
-```{r}
 #' Calcula el valor presente de ese año de las obligaciones por las anualidades de los pensionados
 #' @param df Recibe el df de proy_hombres o proy_mujeres
 #' @return Devuelve un vector con el valor presente para cada año 
 proy_ann_vp <- function(df){
   #La columna 5 es la proyección demográfica de pensionados vivos
   col <- df[[5]]
+  pen_muertos<-df[[7]]
   
   #Se calcula la tasa mensual efectiva
   interes <- 1.07^(1/12) - 1
   
   # se hace el supuesto que paga la primera pensión al final de mes
-  
   #fórmula: Monto*a:12 (con tasa mensual)
   VP_ann <- 300000*(1-(1/1.07))/interes
   
@@ -966,11 +960,34 @@ proy_ann_vp <- function(df){
   VP <- VP_ann + VP_agui
   
   #iteramos sobre los años para asignar el valor presente de cada año
+  #Se calcula cuántos pensionados se mueren ese año, y se utiliza el supuesto de distribución uniforme
   for (i in 1:100){
+    valor_pres<-0
     
-    col[i+1] <- col[i+1]*VP*(1.03/1.07)^(i-1)
+    #Calculamos los pensionados que sobreviven todo ese año:
+    #Calculamos los pensionados muertos al mes
+    if(i==1){
+      pensionados_vivos<-col[i]
+      pensionados_muertos_xmes<-pen_muertos[i]
+    } else{
+       pensionados_vivos<-col[i]-(pen_muertos[i]-pen_muertos[i-1])
+        pensionados_muertos_xmes<-(pen_muertos[i]-pen_muertos[i-1])/12
+       
+    }
+    
+    #A estos pensionados muertos, se les pagará la pensión solo por una parte del año:
+    for (m in 1:11){
+      valor_pres<-valor_pres+
+        pensionados_muertos_xmes*300000*
+        (1/(1+interes)^m)*((1.03/1.07)^(i-1))
+      
+    }
+    #A los que no se mueren en ese año, se les paga todo el año más el aguinaldo
+    valor_pres<-valor_pres+pensionados_vivos*VP*(1.03/1.07)^(i-1)
+    col[i] <- valor_pres
+    valor_pres<-0
   }
-  # se hace el supuesto que empieza a inflarse el monto después del primer pago, además de trae a valor presente a partir del segundo año (el primer año ya se trae a valor presente mediante el uso de la anualidad a:12)
+  # se hace el supuesto que empieza a inflarse el monto después del primer pago, además se trae a valor presente a partir del segundo año (el primer año ya se trae a valor presente mediante el uso de la anualidad a:12)
   return(col)
 }
 ```
@@ -1057,16 +1074,20 @@ rm(proy_M_fin)
 ## Función de la prima
 Va a servir para la nivelada
 ```{r}
-#' Calcula el valor financiero de ese año de las obligaciones por las anualidades de los pensionados
-#' @param df Recibe el df de proy_hombres o proy_mujeres
-#' @return Devuelve un vector con el valor financiero para cada año 
+#' Calcula la prima anual para los empleados de ABC
+#' @param df Recibe el df de probabilidades de sobrevivencia de las personas de ABC
+#' @return Devuelve un data frame con edad, sexo, la prima anual y el vp de las obligaciones de la empresa con la persona. 
 primas <- function(qx){
   c <- 1
   df = data.frame(edad = numeric(500), sexo = numeric(500), prima = numeric(500))
+  
+  #Se itera sobre las personas
   for (i in 1:500){
-    x <- qx[[i]]
+    x <- qx[[i]] 
     
-    if(i != 1) {
+    
+    if(i != 1) {  
+      
       ant <-qx[[i-1]]
       if((x[[2]] == ant[[2]]) & (x[[3]] == ant[[3]])){
         df[c,] <-df[c-1,]
@@ -1075,41 +1096,66 @@ primas <- function(qx){
       }
     } 
     vp_pen <- 0
+    vp_ann<-0
     px_acum <- 1
+    ann_primas<-0
+    
+    #Iteramos sobre la cantidad de años posibles de la persona x
     for (j in 1:length(x[[1]])) {
-      vp_pen <- vp_pen 
+      #vp_pen <- vp_pen 
       # 3 cosas:
       # 1) cálculo de los 1M en caso de muerte del pensionado
       # 2) cálculo de los 5M en caso de muerte del empleado
       # 3) cálculo de la pensión
+      # 4) cálculo de la anualidad para las primas
+     
+      #Si la persona tiene menos de 65 calculamos el seguro de empleado activo y la prima 
       if (j + x[[3]] <= 65){
-        vp_pen <- vp_pen + px_acum *(1 - x[[1]][[j]])*5000000*(1.03/1.07)^(j-1)
-      } else {
-        interes <- 1.07^(1/12) - 1
-        # se hace el supuesto que paga la primera pensión al final de mes 
-        VP_ann <- 300000*(1-(1/1.07))/interes
-        VP_agui <- 300000*(1/1.07) # modificación - aguinaldo a final de año
-        VP <- VP_ann + VP_agui
-        vp_pen <- vp_pen + px_acum *(1 - x[[1]][[j]])*1000000*(1.03/1.07)^(j-1)
-        vp_pen <- vp_pen + px_acum *(x[[1]][[j]])*VP*(1.03/1.07)^(j-1)
+         ann_primas<-ann_primas+
+           px_acum*x[[1]][[j]]*(1.03^(j-1))/(1.07^j) 
+        
+        #Calculamos el vp del seguro de empleado activo
+        vp_pen <- vp_pen + px_acum *(1-x[[1]][[j]])*
+          5000000*(1.03^(j-1))/(1.07^j) 
+      } else { 
+        #Si tiene mas de 65 le calculamos la pensión y el seguro de muerte de pensionado
+        interes <- 1.07^(1/12)-1 #tasa efectiva mensual
+        
+        #utilizaremos el supuesto de distribución uniforme de muertes
+        for (m in 1:12){
+          #Se calcula la probabilidad de vivir j+periodo fraccional de m meses
+          prob_frac<-(1-(m/12))*px_acum+(m/12)*px_acum*x[[1]][[j]]
+         
+          #se hace el supuesto que paga la primera pensión al final de mes 
+          #nos traemos el pago mensual de la pensión a valor actuarial
+          vp_pen<-vp_pen+
+            300000*prob_frac*(1/(1+interes)^m)*(1.03/1.07)^(j-1)
+          
+          vp_ann<-vp_ann+300000*prob_frac*(1/(1+interes)^m)*(1.03/1.07)^(j-1)
+          
+          #Si sobrevive al último mes se le paga también el aguinaldo
+          if(m==12){
+            vp_pen <-vp_pen+
+          300000*px_acum*(x[[1]][[j]])*(1/1.07)*(1.03/1.07)^(j-1)
+            
+            vp_ann <-vp_ann+
+          300000*px_acum*(x[[1]][[j]])*(1/1.07)*(1.03/1.07)^(j-1)
+          }
+        }
+        
+        #Calculamos el vp del seguro del pensionado
+        vp_pen <- vp_pen + 
+          px_acum *(1 - x[[1]][[j]])*1000000*(1.03^(j-1))/(1.07^j) 
       }
       px_acum <- px_acum *(x[[1]][[j]])
-      
-      
     }
-    
-    # Y luego el cálculo de las primas
-    # se hace el supuesto que se aporta la primera vez al final de año
-    # pero no se evalúa ese año. Se empezaría a evaluar si son 2 años
-    
-    annuity <- (1-(1.03/1.07)^(65 - x[[3]]))/(((1.07/1.03)-1)*(1.03/1.07))
-    
     
     df$edad[c] <- x[[3]]
     df$sexo[c] <- x[[2]]
     df$vp[c] <- vp_pen
-    df$anualidad[c] <- annuity
-    df$prima[c] <- vp_pen/annuity
+    df$anualidad[c] <- ann_primas
+    df$prima[c] <- vp_pen/ann_primas
+    df$vp_ann[c]<-vp_ann
     c <- c+1
   }
   return(df)
@@ -1222,8 +1268,14 @@ ggplot() +
 # Prima nivelada
 ## Suma de los valores presentes
 ```{r}
+#Sumamos toda las obligaciones de la empresa en su valor presente
 (suma_vp <- sum(proy_hombres$valor_p) + sum(proy_mujeres$valor_p) )
 (suma_check <- sum(primas(qx)$vp))
+(resta<-suma_vp-suma_check)
+
+(suma_vp_ann <- sum(proy_H_fin$proy_ann_vp) + sum(proy_M_fin$proy_ann_vp) )
+(suma_check_ann<-sum(primas(qx)$vp_ann))
+(resta2<-suma_vp_ann-suma_check_ann)
 ```
 
 ## Cálculo de la prima
