@@ -869,8 +869,8 @@ proy_emp_vp <- function(df){
 
 ### Observaciones
 ```{r}
-proy_H_fin <- data.frame(edad = 0:100)
-proy_M_fin <- data.frame(edad = 0:100)
+proy_H_fin <- data.frame(Año = 2024:2124)
+proy_M_fin <- data.frame(Año = 2024:2124)
 proy_H_fin$proy_emp_vp <- round(proy_emp_vp(proy_hombres),2)
 proy_M_fin$proy_emp_vp <- round(proy_emp_vp(proy_mujeres),2)
 ```
