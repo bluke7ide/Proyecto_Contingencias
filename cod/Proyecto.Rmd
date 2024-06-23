@@ -1656,8 +1656,8 @@ ggplot() +
             size = 1) +
   scale_color_manual(
     values = c(
-      "hombres" = "royalblue",
-      "mujeres" = "purple"
+      "hombres" = "steelblue3",
+      "mujeres" = "hotpink3"
     )
   ) +
   labs(
@@ -2056,9 +2056,9 @@ ggplot() +
           size = 1) +
   scale_color_manual(
     values = c(
-      "determinístico" = "lightblue",
-      "estocástico - per50" = "royalblue",
-      "estocástico - per90" = "darkblue"
+      "determinístico" = "hotpink",
+      "estocástico - per50" = "purple4",
+      "estocástico - per90" = "lightgreen"
     )
   ) +
   labs(
@@ -2086,9 +2086,9 @@ ggplot() +
           size = 1) +
   scale_color_manual(
     values = c(
-      "determinístico" = "lightblue",
-      "estocástico - per50" = "royalblue",
-      "estocástico - per90" = "darkblue"
+      "determinístico" = "hotpink",
+      "estocástico - per50" = "purple4",
+      "estocástico - per90" = "lightgreen"
     )
   ) +
   labs(
@@ -2102,6 +2102,7 @@ ggplot() +
   xlim(50,65) +
   ylim(2,80)
 ```
+
 ```{r, warning=FALSE}
 ggplot() +
   geom_line(data = primas_finales[primas_finales$sexo == 1,],
@@ -2112,20 +2113,20 @@ ggplot() +
             size = 1) +
   scale_color_manual(
     values = c(
-      "estocástico - per90" = "darkorange",
-      "estocástico - per50" = "orange"
+      "estocástico - per90" = "lightgreen",
+      "estocástico - per50" = "purple4"
     )
   ) +
   labs(
     x = "Edad",
     y = "Monto",
-    title = "Diferencias en las primas, para hombres entre 20 y 60 años",
+    title = "Diferencias en las primas, para hombres entre 20 y 65 años",
     color = "Tipo de prima"
   ) +
   theme_minimal() +
   theme(legend.position = 'bottom') +
   xlim(20,65) +
-  ylim(0,5000000)
+  ylim(0,4000000)
 ```
 
 ```{r, warning=FALSE}
@@ -2141,9 +2142,9 @@ ggplot() +
           size = 1) +
   scale_color_manual(
     values = c(
-      "determinístico" = "lightpink",
-      "estocástico - per50" = "purple",
-      "estocástico - per90" = "red"
+      "determinístico" = "hotpink",
+      "estocástico - per50" = "purple4",
+      "estocástico - per90" = "lightgreen"
     )
   ) +
   labs(
@@ -2171,9 +2172,9 @@ ggplot() +
           size = 1) +
   scale_color_manual(
     values = c(
-      "determinístico" = "lightpink",
-      "estocástico - per50" = "purple",
-      "estocástico - per90" = "red"
+      "determinístico" = "hotpink",
+      "estocástico - per50" = "purple4",
+      "estocástico - per90" = "lightgreen"
     )
   ) +
   labs(
@@ -2198,8 +2199,8 @@ ggplot() +
             size = 1) +
   scale_color_manual(
     values = c(
-      "estocástico - per90" = "slateblue2",
-      "estocástico - per50" = "mediumpurple1"
+      "estocástico - per90" = "lightgreen",
+      "estocástico - per50" = "purple4"
     )
   ) +
   labs(
@@ -2210,11 +2211,11 @@ ggplot() +
   ) +
   theme_minimal() +
   theme(legend.position = 'bottom') +
-  xlim(20,65) +
-  ylim(0,5000000)
+  xlim(20,60) +
+  ylim(0,4000000)
 ```
 
-No lograría explicar el comportamiento quebrado en la simulación. Por lo que no hay que incluir estos gráficos.
+
 
 
 
