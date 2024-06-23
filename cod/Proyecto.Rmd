@@ -548,10 +548,10 @@ ggplot() +
   ) +
   scale_color_manual(
     values = c(
-      "vivos" = "#74a9cf",
-      "muertos" = "#045a8d",
-      "vivas" = "#f768a1",
-      "muertas" = "#7a0177"
+      "emp_vivas" = "#fbb4b9",
+      "pen_vivas" = "#f768a1",
+      "emp_muertas" = "#c51b8a",
+      "pen_muertas" = "#7a0177"
     )
   ) +
   labs(
