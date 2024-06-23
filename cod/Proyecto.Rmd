@@ -1247,6 +1247,7 @@ ggplot() +
   theme_minimal() +
   theme(legend.position = 'none')
 ```
+
 ```{r}
 ggplot() +
   geom_line(data = proy_M_fin,
@@ -1278,13 +1279,13 @@ ggplot() +
   scale_color_manual(
     values = c(
       "hombres" = "royalblue",
-      "mujeres" = "purple"
+      "mujeres" = "#7a0177"
     )
   ) +
   labs(
     x = "Año",
     y = "Monto (millones)",
-    title = "Proyección financiera por edad y sexo, en millones",
+    title = "Proyección financiera por sexo, en millones",
     color = "Sexo"
   ) +
   theme_minimal() +
