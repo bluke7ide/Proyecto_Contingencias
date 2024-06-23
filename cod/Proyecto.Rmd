@@ -1033,6 +1033,240 @@ proy_mujeres$valor_p <- proy_M_fin$proy_emp_vp + proy_M_fin$proy_pen_vp + proy_M
 ```
 
 ## Graficar
+
+```{r}
+ggplot() +
+  geom_line(data = proy_H_fin,
+            aes(x = Año, y = proy_emp_vp/1000000, color = "hombres"),
+            size = 1) +
+  scale_color_manual(
+    values = c(
+      "hombres" = "royalblue"
+    )
+  ) +
+  labs(
+    x = "Año",
+    y = "Monto (millones)",
+    title = "Beneficios de muerte empleados activos hombres (vp)",
+    color = "Sexo"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+```{r}
+ggplot() +
+  geom_line(data = proy_M_fin,
+            aes(x = Año, y = proy_emp_vp/1000000, color = "mujeres"),
+            size = 1) +
+  scale_color_manual(
+    values = c(
+      "mujeres" = "#7a0177"
+    )
+  ) +
+  labs(
+    x = "Año",
+    y = "Monto (millones)",
+    title = "Beneficios de muerte empleados activos mujeres (vp)",
+    color = "Sexo"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+```{r}
+ggplot() +
+  geom_line(data = proy_H_fin,
+            aes(x = Año, y = proy_emp_fin/1000000, color = "hombres"),
+            size = 1) +
+  scale_color_manual(
+    values = c(
+      "hombres" = "royalblue"
+    )
+  ) +
+  labs(
+    x = "Año",
+    y = "Monto (millones)",
+    title = "Beneficios de muerte empleados activos hombres"
+  ) +
+  theme_minimal() +
+  theme(legend.position = 'none')
+```
+```{r}
+ggplot() +
+  geom_line(data = proy_M_fin,
+            aes(x = Año, y = proy_emp_fin/1000000, color = "mujeres"),
+            size = 1) +
+  scale_color_manual(
+    values = c(
+      "mujeres" = "#7a0177"
+    )
+  ) +
+  labs(
+    x = "Año",
+    y = "Monto (millones)",
+    title = "Beneficios de muerte empleados activos mujeres",
+    color = "Sexo"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+```{r}
+ggplot() +
+  geom_line(data = proy_H_fin,
+            aes(x = Año, y = proy_pen_vp/1000000, color = "hombres"),
+            size = 1) +
+  scale_color_manual(
+    values = c(
+      "hombres" = "royalblue"
+    )
+  ) +
+  labs(
+    x = "Año",
+    y = "Monto (millones)",
+    title = "Beneficios de muerte pensionados hombres (vp)",
+    color = "Sexo"
+  ) +
+  theme_minimal() +
+  theme(legend.position = 'none')
+```
+```{r}
+ggplot() +
+  geom_line(data = proy_M_fin,
+            aes(x = Año, y = proy_pen_vp/1000000, color = "mujeres"),
+            size = 1) +
+  scale_color_manual(
+    values = c(
+      "mujeres" = "#7a0177"
+    )
+  ) +
+  labs(
+    x = "Año",
+    y = "Monto (millones)",
+    title = "Beneficios de muerte pensionados mujeres (vp)",
+    color = "Sexo"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+```{r}
+ggplot() +
+  geom_line(data = proy_H_fin,
+            aes(x = Año, y = proy_pen_fin/1000000, color = "hombres"),
+            size = 1) +
+  scale_color_manual(
+    values = c(
+      "hombres" = "royalblue"
+    )
+  ) +
+  labs(
+    x = "Año",
+    y = "Monto (millones)",
+    title = "Beneficios de muerte pensionados hombres",
+    color = "Sexo"
+  ) +
+  theme_minimal() +
+  theme(legend.position = 'none')
+```
+```{r}
+ggplot() +
+  geom_line(data = proy_M_fin,
+            aes(x = Año, y = proy_pen_fin/1000000, color = "mujeres"),
+            size = 1) +
+  scale_color_manual(
+    values = c(
+      "mujeres" = "#7a0177"
+    )
+  ) +
+  labs(
+    x = "Año",
+    y = "Monto (millones)",
+    title = "Beneficios de muerte pensionados mujeres",
+    color = "Sexo"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+```{r}
+ggplot() +
+  geom_line(data = proy_H_fin,
+            aes(x = Año, y = proy_ann_vp/1000000, color = "hombres"),
+            size = 1) +
+  scale_color_manual(
+    values = c(
+      "hombres" = "royalblue"
+    )
+  ) +
+  labs(
+    x = "Año",
+    y = "Monto (millones)",
+    title = "Pagos anualidades hombres (vp)",
+    color = "Sexo"
+  ) +
+  theme_minimal() +
+  theme(legend.position = 'none')
+```
+```{r}
+ggplot() +
+  geom_line(data = proy_M_fin,
+            aes(x = Año, y = proy_ann_vp/1000000, color = "mujeres"),
+            size = 1) +
+  scale_color_manual(
+    values = c(
+      "mujeres" = "#7a0177"
+    )
+  ) +
+  labs(
+    x = "Año",
+    y = "Monto (millones)",
+    title = "Pago anualidades mujeres (vp)",
+    color = "Sexo"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+```{r}
+ggplot() +
+  geom_line(data = proy_H_fin,
+            aes(x = Año, y = proy_ann_fin/1000000, color = "hombres"),
+            size = 1) +
+  scale_color_manual(
+    values = c(
+      "hombres" = "royalblue"
+    )
+  ) +
+  labs(
+    x = "Año",
+    y = "Monto (millones)",
+    title = "Pago anualidades hombres",
+    color = "Sexo"
+  ) +
+  theme_minimal() +
+  theme(legend.position = 'none')
+```
+```{r}
+ggplot() +
+  geom_line(data = proy_M_fin,
+            aes(x = Año, y = proy_ann_fin/1000000, color = "mujeres"),
+            size = 1) +
+  scale_color_manual(
+    values = c(
+      "mujeres" = "#7a0177"
+    )
+  ) +
+  labs(
+    x = "Año",
+    y = "Monto (millones)",
+    title = "Pago anualidades mujeres",
+    color = "Sexo"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
 ```{r}
 ggplot() +
   geom_line(data = proy_hombres,
