@@ -28,7 +28,7 @@ SUPEN <- read_excel("data/tavid2000-2150.xls")
 SUPEN_num <- as.data.frame(lapply(SUPEN, as.numeric), stringsAsFactors = FALSE)
 ```
 
-#Observaciones iniciales
+# Observaciones iniciales
 ## Transformaciones menores
 ```{r}
 #Agregar columna de edad:
@@ -859,7 +859,7 @@ proy_emp_vp <- function(df){
   #Fórmula=cantidad de muerte*suma asegurada*v^cantidad de años desde 2024
   for (i in 1:100){
     col[102-i] <- (col[102-i]-
-                     col[101-i])*5000000*((1.03^(100-i))/(1.07)^(99-i))
+                     col[101-i])*5000000*(1.03/1.07)^(100-i)
     # se hace el supuesto que empieza a inflarse el monto después del primer pago
     #Modificación: 100-i pasó a ser 100-i+1 para contemplar de que se paga al final del año.
   }
@@ -907,8 +907,7 @@ proy_pen_vp <- function(df){
   col <- df[[7]] #la columna 7 es la proyección de pensionados muertos
   for (i in 1:100){
     #Fórmula=cantidad de muerte*suma asegurada*v^cantidad de años desde 2024
-    col[102-i] <- (col[102-i]
-                   -col[101-i])*1000000*((1.03^(100-i))/(1.07)^(99-i))
+    col[102-i] <- (col[102-i] - col[101-i])*1000000*(1.03/1.07)^(100-i)
     #se hace el supuesto que empieza a inflarse el monto después del primer pago
     #Modificación: 100-i pasó a ser 100-i+1 para contemplar de que se paga al final del año.
   }
@@ -940,15 +939,24 @@ proy_pen_fin <- function(df){
 
 ### Observaciones
 ```{r}
-#' Calcula el valor presente de ese año de las obligaciones por las anualidades de los pensionados
+proy_H_fin$proy_pen_fin <- round(proy_pen_fin(proy_hombres),2)
+proy_M_fin$proy_pen_fin <- round(proy_pen_fin(proy_mujeres),2)
+```
+
+## Proyección financiera de los pagos de beneficio  de pensionado
+
+
+```{r}
+#' Calcula el valor financiero de ese año de las obligaciones por las anualidades de los pensionados
 #' @param df Recibe el df de proy_hombres o proy_mujeres
-#' @return Devuelve un vector con el valor presente para cada año 
+#' @return Devuelve un vector con el valor financiero para cada año 
 proy_ann_vp <- function(df){
-  #La columna 5 es la proyección demográfica de pensionados vivos
   col <- df[[5]]
-  pen_muertos<-df[[7]]
-  
-  #Se calcula la tasa mensual efectiva
+  muertos <- df[[7]]
+  for (i in 1:100){
+    # Desacumular
+    muertos[102-i] <- (muertos[102-i] - muertos[101-i])
+  }
   interes <- 1.07^(1/12) - 1
   
   # se hace el supuesto que paga la primera pensión al final de mes
@@ -958,36 +966,19 @@ proy_ann_vp <- function(df){
   #fórmula: Monto/tasa anual
   VP_agui <- 300000*(1/1.07) # modificación - aguinaldo a final de año
   VP <- VP_ann + VP_agui
-  
-  #iteramos sobre los años para asignar el valor presente de cada año
-  #Se calcula cuántos pensionados se mueren ese año, y se utiliza el supuesto de distribución uniforme
+  k <- 1/(interes+1)
   for (i in 1:100){
-    valor_pres<-0
-    
-    #Calculamos los pensionados que sobreviven todo ese año:
-    #Calculamos los pensionados muertos al mes
-    if(i==1){
-      pensionados_vivos<-col[i]
-      pensionados_muertos_xmes<-pen_muertos[i]
-    } else{
-       pensionados_vivos<-col[i]-(pen_muertos[i]-pen_muertos[i-1])
-        pensionados_muertos_xmes<-(pen_muertos[i]-pen_muertos[i-1])/12
-       
+    acum <- 0
+    # Caso muerte en un mes predeterminado
+    for(m in 1:11){
+      acum <- acum + (12 - m)*300000*m*muertos[i+1]*k^m/12
     }
     
-    #A estos pensionados muertos, se les pagará la pensión solo por una parte del año:
-    for (m in 1:11){
-      valor_pres<-valor_pres+
-        pensionados_muertos_xmes*300000*
-        (1/(1+interes)^m)*((1.03/1.07)^(i-1))
-      
-    }
-    #A los que no se mueren en ese año, se les paga todo el año más el aguinaldo
-    valor_pres<-valor_pres+pensionados_vivos*VP*(1.03/1.07)^(i-1)
-    col[i] <- valor_pres
-    valor_pres<-0
+    # Caso vive
+    col[i+1] <- (acum  + col[i+1]*VP) *(1.03/1.07)^(i-1)
+    
   }
-  # se hace el supuesto que empieza a inflarse el monto después del primer pago, además se trae a valor presente a partir del segundo año (el primer año ya se trae a valor presente mediante el uso de la anualidad a:12)
+  # se hace el supuesto que empieza a inflarse el monto después del primer pago
   return(col)
 }
 ```
@@ -1005,9 +996,20 @@ proy_M_fin$proy_ann_vp <- round(proy_ann_vp(proy_mujeres),2)
 #' @return Devuelve un vector con el valor financiero para cada año 
 proy_ann_fin <- function(df){
   col <- df[[5]]
+  muertos <- df[[7]]
   for (i in 1:100){
+    # Desacumular
+    muertos[102-i] <- (muertos[102-i] - muertos[101-i])
+  }
+  for (i in 1:100){
+    acum <- 0
+    # Caso muerte en un mes predeterminado
+    for(m in 1:11){
+      acum <- acum + (12 - m)*300000*m*muertos[i+1]/12
+    }
     #13*300 000= 3 900 000
-    col[i+1] <- col[i+1]*3900000*(1.03)^(i-1)
+    col[i+1] <- col[i+1]*(3900000+acum)*(1.03)^(i-1)
+    
   }
   # se hace el supuesto que empieza a inflarse el monto después del primer pago
   return(col)
@@ -1073,21 +1075,20 @@ rm(proy_M_fin)
 # Prima anual
 ## Función de la prima
 Va a servir para la nivelada
+
 ```{r}
 #' Calcula la prima anual para los empleados de ABC
 #' @param df Recibe el df de probabilidades de sobrevivencia de las personas de ABC
-#' @return Devuelve un data frame con edad, sexo, la prima anual y el vp de las obligaciones de la empresa con la persona. 
+#' @return Devuelve un data frame con edad, sexo, la prima anual y el vp de las obligaciones de la empresa con la persona.
 primas <- function(qx){
   c <- 1
   df = data.frame(edad = numeric(500), sexo = numeric(500), prima = numeric(500))
   
   #Se itera sobre las personas
   for (i in 1:500){
-    x <- qx[[i]] 
+    x <- qx[[i]]
     
-    
-    if(i != 1) {  
-      
+    if(i != 1) {
       ant <-qx[[i-1]]
       if((x[[2]] == ant[[2]]) & (x[[3]] == ant[[3]])){
         df[c,] <-df[c-1,]
@@ -1096,72 +1097,63 @@ primas <- function(qx){
       }
     } 
     vp_pen <- 0
-    vp_ann<-0
     px_acum <- 1
     ann_primas<-0
-    
     #Iteramos sobre la cantidad de años posibles de la persona x
     for (j in 1:length(x[[1]])) {
-      #vp_pen <- vp_pen 
-      # 3 cosas:
       # 1) cálculo de los 1M en caso de muerte del pensionado
       # 2) cálculo de los 5M en caso de muerte del empleado
       # 3) cálculo de la pensión
       # 4) cálculo de la anualidad para las primas
-     
-      #Si la persona tiene menos de 65 calculamos el seguro de empleado activo y la prima 
+      
+      # Si la persona tiene menos de 65 calculamos el seguro de empleado activo y la prima 
       if (j + x[[3]] <= 65){
-         ann_primas<-ann_primas+
-           px_acum*x[[1]][[j]]*(1.03^(j-1))/(1.07^j) 
+        # Cálculo de las anualidades de primas
+        ann_primas<-ann_primas + px_acum*(1.03/1.07)^(j-1)
         
-        #Calculamos el vp del seguro de empleado activo
-        vp_pen <- vp_pen + px_acum *(1-x[[1]][[j]])*
-          5000000*(1.03^(j-1))/(1.07^j) 
-      } else { 
+        # Calculamos el vp del seguro de empleado activo
+        vp_pen <- vp_pen + px_acum *(1 - x[[1]][[j]])*5000000*(1.03/1.07)^(j-1)
+      } else {
         #Si tiene mas de 65 le calculamos la pensión y el seguro de muerte de pensionado
-        interes <- 1.07^(1/12)-1 #tasa efectiva mensual
         
-        #utilizaremos el supuesto de distribución uniforme de muertes
-        for (m in 1:12){
-          #Se calcula la probabilidad de vivir j+periodo fraccional de m meses
-          prob_frac<-(1-(m/12))*px_acum+(m/12)*px_acum*x[[1]][[j]]
-         
-          #se hace el supuesto que paga la primera pensión al final de mes 
-          #nos traemos el pago mensual de la pensión a valor actuarial
-          vp_pen<-vp_pen+
-            300000*prob_frac*(1/(1+interes)^m)*(1.03/1.07)^(j-1)
-          
-          vp_ann<-vp_ann+300000*prob_frac*(1/(1+interes)^m)*(1.03/1.07)^(j-1)
-          
-          #Si sobrevive al último mes se le paga también el aguinaldo
-          if(m==12){
-            vp_pen <-vp_pen+
-          300000*px_acum*(x[[1]][[j]])*(1/1.07)*(1.03/1.07)^(j-1)
-            
-            vp_ann <-vp_ann+
-          300000*px_acum*(x[[1]][[j]])*(1/1.07)*(1.03/1.07)^(j-1)
-          }
+        
+        interes <- 1.07^(1/12) - 1
+        # se hace el supuesto que paga la primera pensión al final de mes 
+        VP_ann <- 300000*(1-(1/1.07))/interes
+        VP_agui <- 300000*(1/1.07) # modificación - aguinaldo a final de año
+        VP <- VP_ann + VP_agui
+        vp_pen <- vp_pen + px_acum *(1 - x[[1]][[j]])*1000000*(1.03/1.07)^(j-1)
+        k <- 1/(1+interes) # V mensual
+        acum <- 0
+        # Caso muerte en un mes predeterminado
+        for(m in 1:11){
+          acum <- acum + (12 - m)*300000*m*px_acum *(1 - x[[1]][[j]])*k^m/12
         }
         
-        #Calculamos el vp del seguro del pensionado
-        vp_pen <- vp_pen + 
-          px_acum *(1 - x[[1]][[j]])*1000000*(1.03^(j-1))/(1.07^j) 
+        # Se suman los valores presentes por el caso de que viva o muera
+        vp_pen <- vp_pen + (acum + px_acum *(x[[1]][[j]])*VP)*(1.03/1.07)^(j-1)
       }
+      
+      # Actualiza la probabilidad acumulada
       px_acum <- px_acum *(x[[1]][[j]])
+      
+      
     }
-    
+    # Almacena los resultados en el dataframe
     df$edad[c] <- x[[3]]
     df$sexo[c] <- x[[2]]
     df$vp[c] <- vp_pen
     df$anualidad[c] <- ann_primas
     df$prima[c] <- vp_pen/ann_primas
-    df$vp_ann[c]<-vp_ann
     c <- c+1
   }
   return(df)
 }
+
+
 primas_anuales <- primas(qx)
 primas_anuales <- primas_anuales %>% arrange(edad) %>% distinct()
+
 ```
 
 ## Resumir la prima anual
@@ -1273,9 +1265,6 @@ ggplot() +
 (suma_check <- sum(primas(qx)$vp))
 (resta<-suma_vp-suma_check)
 
-(suma_vp_ann <- sum(proy_H_fin$proy_ann_vp) + sum(proy_M_fin$proy_ann_vp) )
-(suma_check_ann<-sum(primas(qx)$vp_ann))
-(resta2<-suma_vp_ann-suma_check_ann)
 ```
 
 ## Cálculo de la prima
@@ -1283,7 +1272,7 @@ ggplot() +
 (prima_nivelada <- suma_vp/sum(primas(qx)$anualidad))
 ```
 
-La prima nivelada entonces da 1.2 millones de colones anuales aproximadamente, o 98 mil colones al mes.
+La prima nivelada entonces da 1.28 millones de colones anuales aproximadamente, o 106 mil colones al mes.
 
 # Prueba de métodos diferentes
 ## Modificación de la función primas
@@ -1315,11 +1304,13 @@ primas_esp <- function(qx, m_p, m_me, m_mp){
     # Inicializa el valor presente de las pensiones y la probabilidad acumulada
     vp_pen <- 0
     px_acum <- 1
+    ann_primas <- 0
     # Itera sobre cada año para calcular el valor presente de las pensiones
     for (j in 1:length(x[[1]])) {
       vp_pen <- vp_pen 
       # Cálculo del valor presente de las pensiones en caso de muerte antes y después de los 65
       if (j + x[[3]] <= 65){
+        ann_primas <- ann_primas + px_acum*(1.03/1.07)^(j-1)
         vp_pen <- vp_pen + px_acum *(1 - x[[1]][[j]])*m_me*(1.03/1.07)^(j-1)
       } else {
         interes <- 1.07^(1/12) - 1
@@ -1328,22 +1319,27 @@ primas_esp <- function(qx, m_p, m_me, m_mp){
         VP_agui <- m_p*(1/1.07)
         VP <- VP_ann + VP_agui
         vp_pen <- vp_pen + px_acum *(1 - x[[1]][[j]])*m_mp*(1.03/1.07)^(j-1)
-        vp_pen <- vp_pen + px_acum *(x[[1]][[j]])*VP*(1.03/1.07)^(j-1)
+        k <- 1/(1+interes)
+        acum <- 0
+        # Caso muerte en un mes predeterminado
+        for(m in 1:11){
+          acum <- acum + (12 - m)*m_p*m*px_acum *(1 - x[[1]][[j]])*k^m/12
+        }
+        
+        vp_pen <- vp_pen + (acum + px_acum *(x[[1]][[j]])*VP)*(1.03/1.07)^(j-1)
       }
       # Actualiza la probabilidad acumulada
       px_acum <- px_acum *(x[[1]][[j]])
       
       
     }
-    # Cálculo de las anualidades
-    annuity <- (1-(1.03/1.07)^(65 - x[[3]]))/(((1.07/1.03)-1)*(1.03/1.07))
 
     # Almacena los resultados en el dataframe
     df$edad[c] <- x[[3]]
     df$sexo[c] <- x[[2]]
     df$vp[c] <- vp_pen
-    df$anualidad[c] <- annuity
-    df$prima[c] <- vp_pen/annuity
+    df$anualidad[c] <- ann_primas
+    df$prima[c] <- vp_pen/ann_primas
     c <- c+1
   }
   return(df)
@@ -1412,6 +1408,7 @@ Para la construcción de un modelo estocástico ocuparemos:
 2) las personas, dadas por runif
 3) Pagar los montos respectivos, dependiendo de la muerte o no
 
+## Preparativos para acelerar el proceso
 ```{r}
 lista_90 <- data.frame(Edad = primas_anuales$edad, Sexo = primas_anuales$sexo)
 qx_unicos <- get_qx(lista_90, SUPEN_num)
@@ -1422,6 +1419,7 @@ for (c in 1:90){
   edades[c] <- qx_unicos[[c]][[3]]
   sexo[c] <- qx_unicos[[c]][[2]]
 }
+k <- 1/(1.07^(1/12))
 VP <- (300000*(1-(1/1.07)))/(1.07^(1/12) - 1) + 300000*(1/1.07) # modificación - aguinaldo a final de año)
 ```
 
@@ -1461,9 +1459,14 @@ simulacion <- function(df){
             suma_vp[c] <- suma_vp[c] + 1000000*dif
           } else {
             suma_vp[c] <- suma_vp[c] + 5000000*dif
+            mes <- floor(12*runif(1))+1
+            suma_vp[c] <- suma_vp[c] + (12 - mes)*300000*mes*dif*k^mes/12
           }
         }
       }
+      
+      
+        
       # Suma el valor presente de las pensiones en caso de que el individuo siga vivo
       suma_vp[c] <- suma_vp[c] + pen[c]*vivos[c]*VP*dif
     }
