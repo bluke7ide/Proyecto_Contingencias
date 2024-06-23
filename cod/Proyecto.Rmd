@@ -548,10 +548,10 @@ ggplot() +
   ) +
   scale_color_manual(
     values = c(
-      "emp_vivas" = "deeppink1",
-      "pen_vivas" = "darksalmon",
-      "emp_muertas" = "darkred",
-      "pen_muertas" = "goldenrod4"
+      "vivos" = "#74a9cf",
+      "muertos" = "#045a8d",
+      "vivas" = "#f768a1",
+      "muertas" = "#7a0177"
     )
   ) +
   labs(
@@ -599,10 +599,10 @@ ggplot() +
   ) +
   scale_color_manual(
     values = c(
-      "emp_vivos" = "mediumturquoise",
-      "pen_vivos" = "deepskyblue4",
-      "emp_muertos" = "navy",
-      "pen_muertos" = "gray11"
+      "emp_vivos" = "#bdc9e1",
+      "pen_vivos" = "#74a9cf",
+      "emp_muertos" = "#2b8cbe",
+      "pen_muertos" = "#045a8d"
     )
   ) +
   labs(
@@ -636,10 +636,10 @@ ggplot() +
   ) +
   scale_color_manual(
     values = c(
-      "vivos" = "dodgerblue1",
-      "muertos" = "darkblue",
-      "vivas" = "magenta2",
-      "muertas" = "red3"
+      "vivos" = "#74a9cf",
+      "muertos" = "#045a8d",
+      "vivas" = "#f768a1",
+      "muertas" = "#7a0177"
     )
   ) +
   labs(
