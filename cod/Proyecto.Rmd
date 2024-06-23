@@ -1911,6 +1911,7 @@ for (c in 1:90){
 }
 k <- 1/(1.07^(1/12))
 VP <- (300000*(1-(1/1.07)))/(1.07^(1/12) - 1) + 300000*(1/1.07) # modificación - aguinaldo a final de año)
+eval <- (1.03/1.07)^(1:96)
 ```
 
 ## Creando la función de simulación
@@ -1920,22 +1921,23 @@ VP <- (300000*(1-(1/1.07)))/(1.07^(1/12) - 1) + 300000*(1/1.07) # modificación 
 #' @param df Recibe un dataframe que contiene la probabilidad de supervivencia, edad y sexo para cada individuo
 #' @return Devuelve un dataframe con las primas calculadas para cada individuo
 simulacion <- function(df){
-  # Inicializa los vectores para contar los vivos, las pensiones y la suma del valor   presente
-  vivos <- numeric(length(df)) + 1
-  pen <- numeric(length(df))
-  suma_vp <- numeric(length(df))
+  len <- length(df)
+  # Inicializa los vectores para contar los vivos, las pensiones y la suma del valor presente
+  vivos <- numeric(len) + 1
+  pen <- numeric(len)
+  suma_vp <- numeric(len)
   # Itera sobre cada uno de los períodos
   for (i in 1:96){
     # Calcula el factor de descuento para el período actual
-    dif <- (1.03/1.07)^(i-1)
+    dif <- eval[i]
     # Itera sobre cada individuo en el dataframe
-    for (c in 1:length(df)){
-      # Si el individuo ya está muerto o no hay más datos de probabilidad, pasa al        siguiente
+    for (c in 1:len){
+      # Si el individuo ya está muerto o no hay más datos de probabilidad, pasa al siguiente
       if(vivos[c] == 0 | i > length(df[[c]][[1]])){
         next
       }
       
-      # Si la edad del individuo más el período actual es mayor a 65, se le otorga         pensión
+      # Si la edad del individuo más el período actual es mayor a 65, se le otorga pensión
       if(df[[c]][[3]] + i > 65){
         pen[c] <- 1
       }
@@ -1944,13 +1946,17 @@ simulacion <- function(df){
       if(vivos[c] == 1){
         if(runif(1) > df[[c]][[1]][[i]]){
           vivos[c] <- 0
-          # Calcula el valor presente en caso de muerte, dependiendo de si tenía               pensión o no
+          # Calcula el valor presente en caso de muerte, dependiendo de si tenía pensión o no
           if(pen[c] == 1){
             suma_vp[c] <- suma_vp[c] + 1000000*dif
+            mes <- floor(12*runif(1))+1
+            if(mes != 12){
+              suma_vp[c] <- suma_vp[c] + (12 - mes)*300000*mes*dif*k^mes/12
+            } else {
+              suma_vp[c] <- suma_vp[c] + pen[c]*vivos[c]*VP*dif/12
+            }
           } else {
             suma_vp[c] <- suma_vp[c] + 5000000*dif
-            mes <- floor(12*runif(1))+1
-            suma_vp[c] <- suma_vp[c] + (12 - mes)*300000*mes*dif*k^mes/12
           }
         }
       }
@@ -1970,14 +1976,6 @@ simulacion <- function(df){
 ```
 
 ```{r}
-simulacion <- function(df){
-  matriz <- matrix(nrow = 90, ncol = 96, data = 0)
-  
-}
-```
-
-
-```{r}
 t <- proc.time()
 una <- simulacion(qx_unicos)
 proc.time() - t
@@ -1986,25 +1984,27 @@ proc.time() - t
 ## Las simulaciones
 La función dura 30 min, o 26 min aproximadamente
 ```{r}
-# t <- proc.time()
-# simulaciones <- list()
-# for(i in 1:100000){
-#   print(i)
-#   simulaciones[[i]] <- simulacion(qx_unicos)
-# }
-# proc.time() - t
+t <- proc.time()
+simulaciones <- list()
+for(i in 1:100000){
+  if(i %% 1000 == 0){
+    print(i)
+  }
+  simulaciones[[i]] <- simulacion(qx_unicos)
+}
+proc.time() - t
 ```
 
 ## Proceder a escribir la data para guardarla
 ```{r}
-# datos_sim <- data.frame(primas_anuales[,1:2], simulaciones)
-# names(datos_sim) <- c("edad", "sexo", 1:100000)
-# write.csv(datos_sim,"simulaciones.csv")
+datos_sim <- data.frame(primas_anuales[,1:2], simulaciones)
+names(datos_sim) <- c("edad", "sexo", 1:100000)
+write.csv(datos_sim,"res/simulaciones.csv")
 ```
 
 ## Revertir el cambio e importar los datos
 ```{r}
-datos_sim <- read_csv("data/simulaciones.csv", show_col_types = FALSE) %>% select(-`...1`)
+datos_sim <- read_csv("res/simulaciones.csv", show_col_types = FALSE) %>% select(-`...1`)
 ```
 
 ## Cálculo de percentiles
@@ -2020,6 +2020,8 @@ proc.time() - t
 ```
 
 ```{r}
+rm(eval)
+rm(c)
 rm(una)
 rm(i)
 rm(get_qx)
@@ -2031,6 +2033,7 @@ rm(edades)
 rm(anualidades)
 rm(lista_90)
 rm(temp)
+rm(k)
 ```
 
 # Comparación de primas
