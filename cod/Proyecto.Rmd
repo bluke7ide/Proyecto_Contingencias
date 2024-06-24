@@ -39,7 +39,6 @@ ABC[ABC$Sexo == 'F',]$Sexo <- 'Mujeres'#Mujeres: 2
 
 ## Transformaciones y visualizaciones iniciales
 ```{r}
-
 #Agregar una columna de rango de edad. 
 #Rangos:  20-24, 25-29, 30-34, 35-39, 40-44, 45-49, 50-54, 55-59, 60-64, +65
 breaks<-c(20,24,29,34,39,44,49,54,59,65)
@@ -76,7 +75,6 @@ ABC[ABC$Sexo == 'Hombres',]$Sexo <- "1"
 ABC[ABC$Sexo == 'Mujeres',]$Sexo <- "2"
 ABC$Sexo <- as.double(ABC$Sexo) 
 ```
-
 
 # Función para recolectar los qx de un df agrupado
 ```{r}
@@ -1984,22 +1982,22 @@ proc.time() - t
 ## Las simulaciones
 La función dura 30 min, o 26 min aproximadamente
 ```{r}
-t <- proc.time()
-simulaciones <- list()
-for(i in 1:100000){
-  if(i %% 1000 == 0){
-    print(i)
-  }
-  simulaciones[[i]] <- simulacion(qx_unicos)
-}
-proc.time() - t
+# t <- proc.time()
+# simulaciones <- list()
+# for(i in 1:100000){
+#   if(i %% 1000 == 0){
+#     print(i)
+#   }
+#   simulaciones[[i]] <- simulacion(qx_unicos)
+# }
+# proc.time() - t
 ```
 
 ## Proceder a escribir la data para guardarla
 ```{r}
-datos_sim <- data.frame(primas_anuales[,1:2], simulaciones)
-names(datos_sim) <- c("edad", "sexo", 1:100000)
-write.csv(datos_sim,"res/simulaciones.csv")
+# datos_sim <- data.frame(primas_anuales[,1:2], simulaciones)
+# names(datos_sim) <- c("edad", "sexo", 1:100000)
+# write.csv(datos_sim,"res/simulaciones.csv")
 ```
 
 ## Revertir el cambio e importar los datos
