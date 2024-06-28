@@ -2213,6 +2213,256 @@ ggplot() +
   ylim(0,4000000)
 ```
 
+# Análisis de sensibilidad
+## Funcion de primas con parámetros de inflación y tasa nominal
+```{r}
+primas_sens <- function(qx, inflacion, tasa_nominal){
+  c <- 1
+  df = data.frame(edad = numeric(500), sexo = numeric(500), prima = numeric(500))
+  
+  #Se itera sobre las personas
+  for (i in 1:500){
+    x <- qx[[i]]
+    
+    if(i != 1) {
+      ant <-qx[[i-1]]
+      if((x[[2]] == ant[[2]]) & (x[[3]] == ant[[3]])){
+        df[c,] <-df[c-1,]
+        c <- c+1
+        next
+      }
+    } 
+    vp_pen <- 0
+    px_acum <- 1
+    ann_primas<-0
+    #Iteramos sobre la cantidad de años posibles de la persona x
+    for (j in 1:length(x[[1]])) {
+      # 1) cálculo de los 1M en caso de muerte del pensionado
+      # 2) cálculo de los 5M en caso de muerte del empleado
+      # 3) cálculo de la pensión
+      # 4) cálculo de la anualidad para las primas
+      
+      # Si la persona tiene menos de 65 calculamos el seguro de empleado activo y la prima 
+      if (j + x[[3]] <= 65){
+        # Cálculo de las anualidades de primas
+        ann_primas<-ann_primas + px_acum*(inflacion/tasa_nominal)^(j-1)
+        
+        # Calculamos el vp del seguro de empleado activo
+        vp_pen <- vp_pen + px_acum *(1 - x[[1]][[j]])*5000000*(inflacion/tasa_nominal)^(j-1)
+      } else {
+        #Si tiene mas de 65 le calculamos la pensión y el seguro de muerte de pensionado
+        
+        
+        interes <- tasa_nominal^(1/12) - 1
+        # se hace el supuesto que paga la primera pensión al final de mes 
+        VP_ann <- 300000*(1-(1/tasa_nominal))/interes
+        VP_agui <- 300000*(1/tasa_nominal) # modificación - aguinaldo a final de año
+        VP <- VP_ann + VP_agui
+        vp_pen <- vp_pen + px_acum *(1 - x[[1]][[j]])*1000000*(inflacion/tasa_nominal)^(j-1)
+        k <- 1/(1+interes) # V mensual
+        acum <- 0
+        # Caso muerte en un mes predeterminado
+        for(m in 1:11){
+          acum <- acum + (12 - m)*300000*m*px_acum *(1 - x[[1]][[j]])*k^m/12
+        }
+        
+        # Se suman los valores presentes por el caso de que viva o muera
+        vp_pen <- vp_pen + 
+          (acum + (px_acum *(x[[1]][[j]] + (1 - x[[1]][[j]])/12))*VP)*(inflacion/tasa_nominal)^(j-1)
+      }
+      
+      # Actualiza la probabilidad acumulada
+      px_acum <- px_acum *(x[[1]][[j]])
+      
+      
+    }
+    # Almacena los resultados en el dataframe
+    df$edad[c] <- x[[3]]
+    df$sexo[c] <- x[[2]]
+    df$vp[c] <- vp_pen
+    df$anualidad[c] <- ann_primas
+    df$prima[c] <- vp_pen/ann_primas
+    c <- c+1
+  }
+  return(df)
+}
+
+```
+
+##Analisis de inflación al 2 y rendimientos al 3
+```{r}
+#primas
+primas_anuales_1 <- primas_sens(qx, 1.02, 1.05)
+
+#primas niveladas
+suma_vp1<-sum(primas_anuales_1$vp)
+suma_ann1<-sum(primas_anuales_1$anualidad)
+prima_nivelada_1 <- suma_vp1/suma_ann1
+print(prima_nivelada_1)
+```
+
+##Anális de inflacion al 3 y rendimientos al 3
+```{r}
+#primas
+primas_anuales_2 <- primas_sens(qx, 1.03, 1.06)
+
+#primas niveladas
+suma_vp2<-sum(primas_anuales_2$vp)
+suma_ann2<-sum(primas_anuales_2$anualidad)
+prima_nivelada_2 <- suma_vp2/suma_ann2
+print(prima_nivelada_2)
+```
+
+##Anális de inflacion al 4 y rendimientos al 3
+```{r}
+#primas
+primas_anuales_3 <- primas_sens(qx, 1.04, 1.07)
+
+#primas niveladas
+suma_vp3<-sum(primas_anuales_3$vp)
+suma_ann3<-sum(primas_anuales_3$anualidad)
+prima_nivelada_3 <- suma_vp3/suma_ann3
+print(prima_nivelada_3)
+```
+
+##Análisis de inflación al 2 y rendimientos al 4
+```{r}
+#primas
+primas_anuales_4 <- primas_sens(qx, 1.02, 1.06)
+
+#primas niveladas
+suma_vp4<-sum(primas_anuales_4$vp)
+suma_ann4<-sum(primas_anuales_4$anualidad)
+prima_nivelada_4 <- suma_vp4/suma_ann4
+print(prima_nivelada_4)
+```
+
+##Análisis de inflación al 4 y rendimientos al 4
+```{r}
+#primas
+primas_anuales_5 <- primas_sens(qx, 1.04, 1.08)
+
+#primas niveladas
+suma_vp5<-sum(primas_anuales_5$vp)
+suma_ann5<-sum(primas_anuales_5$anualidad)
+prima_nivelada_5 <- suma_vp5/suma_ann5
+print(prima_nivelada_5)
+```
+
+##Análisis de inflación al 2 y rendimientos al 5
+```{r}
+#primas
+primas_anuales_6 <- primas_sens(qx, 1.02, 1.07)
+
+#primas niveladas
+suma_vp6<-sum(primas_anuales_6$vp)
+suma_ann6<-sum(primas_anuales_6$anualidad)
+prima_nivelada_6 <- suma_vp6/suma_ann6
+print(prima_nivelada_6)
+```
+
+##Análisis de inflación al 3 y rendimientos al 5
+```{r}
+#primas
+primas_anuales_7 <- primas_sens(qx, 1.03, 1.08)
+
+#primas niveladas
+suma_vp7<-sum(primas_anuales_7$vp)
+suma_ann7<-sum(primas_anuales_7$anualidad)
+prima_nivelada_7 <- suma_vp7/suma_ann7
+print(prima_nivelada_7)
+```
+
+##Análisis de inflación al 4 y rendimientos al 5
+```{r}
+#primas
+primas_anuales_8 <- primas_sens(qx, 1.04, 1.09)
+
+#primas niveladas
+suma_vp8<-sum(primas_anuales_8$vp)
+suma_ann8<-sum(primas_anuales_8$anualidad)
+prima_nivelada_8 <- suma_vp8/suma_ann8
+print(prima_nivelada_8)
+```
+# Anexos
+## Anexos demográficos
+```{r}
+#Preparamos las tablas finales para hacer los anexos
+anexo_mujeres_demografico<-
+  proy_mujeres[, c("año", "proy_vivas", "proy_muertas", "proy_emp_vivas" , "proy_pen_vivas", "proy_emp_muertas", "proy_pen_muertas" )]
+anexo_hombres_demografico<-
+  proy_hombres[, c("año", "proy_vivos", "proy_muertos", "proy_emp_vivos" , "proy_pen_vivos", "proy_emp_muertos", "proy_pen_muertos" )]
+
+#Desacumulamos las muertes hombres
+anexo_hombres_demografico$proy_muertos<-c(proy_hombres$proy_muertos[1],
+                                          diff(proy_hombres$proy_muertos))
+
+anexo_hombres_demografico$proy_emp_muertos<-c(proy_hombres$proy_emp_muertos[1],
+                                          diff(proy_hombres$proy_emp_muertos))
+
+anexo_hombres_demografico$proy_pen_muertos<-c(proy_hombres$proy_pen_muertos[1],
+                                          diff(proy_hombres$proy_pen_muertos))
+
+
+#Desacumulamos la muertes mujeres
+anexo_mujeres_demografico$proy_muertas<-c(proy_mujeres$proy_muertas[1],
+                                          diff(proy_mujeres$proy_muertas))
+
+anexo_mujeres_demografico$proy_emp_muertas<-c(proy_mujeres$proy_emp_muertas[1],
+                                          diff(proy_mujeres$proy_emp_muertas))
+
+anexo_mujeres_demografico$proy_pen_muertas<-c(proy_mujeres$proy_pen_muertas[1],
+                                          diff(proy_mujeres$proy_pen_muertas))
+
+#Nos quedamos solo con dos dígitos de decimales
+anexo_mujeres_demografico<-round(anexo_mujeres_demografico,2)
+anexo_hombres_demografico<-round(anexo_hombres_demografico,2)
+
+#Utilizar únicamente los años que aplican:
+anexo_hombres_demografico<-head(anexo_hombres_demografico, 90)
+anexo_mujeres_demografico<-head(anexo_mujeres_demografico, 90)
+
+```
+
+## Anexos financieros
+```{r}
+anexo_fin<-data.frame(año=c(2024:2124),
+                      proy_fin_hombres=proy_hombres$valor_fin ,
+                      proy_fin_mujeres=proy_mujeres$valor_fin)
+anexo_fin<-head(anexo_fin, 90)
+anexo_fin<-slice(anexo_fin,-1)
+```
+
+## Anexos primas
+```{r}
+anexo_primas_mujeres<-filter(primas_anuales, sexo==2)
+anexo_primas_hombres<-filter(primas_anuales, sexo==1)
+
+anexo_primas_mujeres<-anexo_primas_mujeres[, c("edad", "prima")]
+anexo_primas_hombres<-anexo_primas_hombres[, c("edad", "prima")]
+
+percentiles_hombres<-filter(percentiles, sexo==1)
+percentiles_mujeres<-filter(percentiles, sexo==2)
+percentiles_hombres<-percentiles_hombres[, c("per_50", "per_90")]
+percentiles_mujeres<-percentiles_mujeres[, c("per_50", "per_90")]
+
+anexo_primas_mujeres<-cbind(anexo_primas_mujeres, percentiles_mujeres)
+anexo_primas_hombres<-cbind(anexo_primas_hombres, percentiles_hombres)
+anexo_primas_hombres<-round(anexo_primas_hombres,0)
+anexo_primas_mujeres<-round(anexo_primas_mujeres,0)
+```
+
+## convertir a csv
+```{r}
+write.csv(anexo_mujeres_demografico,"res/demografico_mujeres.csv")
+write.csv(anexo_hombres_demografico,"res/demografico_hombres.csv")
+
+write.csv(anexo_fin,"res/proy_financieras.csv")
+
+write.csv(anexo_primas_hombres,"res/primas_hombres.csv")
+write.csv(anexo_primas_mujeres,"res/primas_mujeres.csv")
+```
+
 
 
 
